@@ -1,9 +1,23 @@
 import os, time, random, win32gui, re, sys
 from win32con import *
-from PIL import ImageGrab
 
 WORLD_FROM_BOTTOM = 55
 XCOORD_FROM_BOTTOM = 185
+MOVE_FROM_COORD = 200
+
+class village():
+
+    def __init__(self, pos, preset):
+        self.pos = (str(pos[0]),str(pos[1]))
+        self.preset = str(preset)
+
+    def distance(self, other):
+        xs = np.power((self.pos[0]-other.pos[0]), 2)
+        ys = np.power((self.pos[1]-other.pos[1]), 2)
+        return np.sqrt(xs + (0.75*ys))
+
+    def __str__(self):
+        return "("+str(self.orig_pos[0])+"|"+str(self.orig_pos[1])+")"
 
 class WindowMgr:
     """Encapsulates some calls to the winapi for window management"""
@@ -51,7 +65,7 @@ def find_wold_map_pos( handle ):
 def type( handle, text ):
     time.sleep(0.3)
     for each in text:
-        win32gui.PostMessage(w._handle, WM_CHAR, ord(each), 0)
+        win32gui.PostMessage(handle, WM_CHAR, ord(each), 0)
         time.sleep(0.2)
 
 def find_window():
@@ -62,8 +76,44 @@ def find_window():
         sys.exit(-1)
     return w
 
+def send_clear( handle ):
+    win32gui.PostMessage(handle, WM_KEYDOWN, VK_DELETE, 0)
+    win32gui.PostMessage(handle, WM_KEYDOWN, VK_DELETE, 0)
+    win32gui.PostMessage(handle, WM_KEYDOWN, VK_DELETE, 0)
+    time.sleep(0.1)
+    win32gui.PostMessage(handle, WM_KEYUP, VK_DELETE, 0)
+    win32gui.PostMessage(handle, WM_KEYDOWN, VK_BACK, 0)
+    win32gui.PostMessage(handle, WM_KEYDOWN, VK_BACK, 0)
+    win32gui.PostMessage(handle, WM_KEYDOWN, VK_BACK, 0)
+    time.sleep(0.1)
+    win32gui.PostMessage(handle, WM_KEYUP, VK_BACK, 0)
+
+def send_tab( handle ):
+    win32gui.PostMessage(handle, WM_KEYDOWN, VK_TAB, 0)
+    time.sleep(0.1)
+    win32gui.PostMessage(handle, WM_KEYUP, VK_TAB, 0)
+
+def attack( w, vill ):
+    pos = find_wold_map_pos(w)
+    click(w, (pos[0], pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
+    time.sleep(0.2)
+    send_clear(w) # CTR-A + backspace or delete
+    time.sleep(0.1)
+    type(w, vill.pos[0])
+    time.sleep(0.2)
+    send_tab(w)
+    time.sleep(0.1)
+    send_clear(w)
+    time.sleep(0.2)
+    type(w, vill.pos[1])
+    click(w, (pos[0] + MOVE_FROM_COORD, pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
+    time.sleep(0.5)
+    type(w, vill.preset)
+    time.sleep(0.5)
+    type(w, vill.preset)
+
 w = find_window()
 pos = find_wold_map_pos(w)
 click(w, pos)
-click(w, (pos[0], pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
-type(w, "468")
+attack(w, village(('454','409'), '9'))
+
