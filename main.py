@@ -24,6 +24,9 @@ class WindowMgr:
         self._handle = None
         win32gui.EnumWindows(self._window_enum_callback, wildcard)
 
+    def __int__(self):
+        return self._handle
+
 def click( handle, pos ):
     lParam = (pos[1] << 16) | pos[0]
     win32gui.PostMessage(handle, WM_LBUTTONDOWN, MK_LBUTTON, lParam )
@@ -51,12 +54,16 @@ def type( handle, text ):
         win32gui.PostMessage(w._handle, WM_CHAR, ord(each), 0)
         time.sleep(0.2)
 
-w = WindowMgr()
-w.find_window_wildcard(".*Tribal Wars 2.*")
-if w._handle is None:
-    sys.exit(-1)
+def find_window():
+    w = WindowMgr()
+    w.find_window_wildcard(".*Tribal Wars 2.*")
+    if w._handle is None:
+        print ("Could not find requested window")
+        sys.exit(-1)
+    return w
 
-pos = find_wold_map_pos(w._handle)
-click(w._handle, pos)
-click(w._handle, (pos[0], pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
-type(w._handle, "468")
+w = find_window()
+pos = find_wold_map_pos(w)
+click(w, pos)
+click(w, (pos[0], pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
+type(w, "468")
