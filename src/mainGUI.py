@@ -15,7 +15,7 @@ class BotGUI(wx.Frame):
         try:
             self.load_data()
         except IOError:
-            self.sets.append("Default")
+            self.sets.append("First Village")
             self.villages.append([village((-1, -1), -1)])
 
         temp = wx.StaticText(self.panel, -1, "Attack sets: ", pos=(10, 5))
@@ -24,6 +24,7 @@ class BotGUI(wx.Frame):
         self.set_list.SetSelection(0)
 
         temp = wx.StaticText(self.panel, -1, "Targets and preset key: ", pos=(210, 5))
+
         self.vil_list = wx.ListBox(self.panel, 3, pos=wx.Point(210, 25), size=(250, 280),
                                    choices=[str(each) for each in self.villages[0]], name='Villages')
         self.vil_list.SetSelection(0)
@@ -60,6 +61,9 @@ class BotGUI(wx.Frame):
 
         self.runButton = wx.Button(self.panel, label="Run Set", pos=(480, 280), size=(80, 80))
         self.Bind(wx.EVT_BUTTON, self.run, self.runButton)
+
+        self.attackNum = wx.StaticText(self.panel, -1, "Number of attacks: " + str(len(self.villages[0])), pos=(210, 305))
+        self.presetNum = wx.StaticText(self.panel, -1, self.makePresetText(), pos=(210, 335))
 
     def run(self, e):
         selected_set = self.set_list.GetSelection()
@@ -106,7 +110,7 @@ class BotGUI(wx.Frame):
             pos = ("-1", "-1")
 
         try:
-            preset = int(self.presetText.GetValue())
+            preset = str(int(self.presetText.GetValue()))
         except ValueError:
             preset = "-1"
 
@@ -159,7 +163,10 @@ class BotGUI(wx.Frame):
             return
         self.sets.append(name)
         self.villages.append([])
+
         self.resetSetListBox()
+        self.set_list.SetSelection(len(self.sets)-1)
+        self.onSetListBox(None)
 
     def remSet(self, e):
         selected_set = self.set_list.GetSelection()
@@ -188,6 +195,8 @@ class BotGUI(wx.Frame):
         self.vil_list = wx.ListBox(self.panel, 3, pos=wx.Point(210, 25), size=(250, 280),
                                    choices=[str(each) for each in self.villages[selected_set]], name='Villages')
         self.vil_list.Bind(wx.EVT_LISTBOX, self.onVilListBox, id=3)
+        if (len(self.villages[selected_set])<1):
+            self.newAttack(None)
         self.vil_list.SetSelection(0)
         self.resetTexts()
 
@@ -198,11 +207,27 @@ class BotGUI(wx.Frame):
         self.coordText.Destroy()
         self.coordText2.Destroy()
         self.presetText.Destroy()
+        self.attackNum.Destroy()
+        self.presetNum.Destroy()
         selected_vil = self.vil_list.GetSelection()
         set = self.set_list.GetSelection()
         self.coordText = wx.TextCtrl(self.panel, -1, str(self.villages[set][selected_vil].pos[0]), pos=(480, 40), size=(40, 16))
         self.coordText2 = wx.TextCtrl(self.panel, -1, str(self.villages[set][selected_vil].pos[1]), pos=(530, 40), size=(40, 16))
         self.presetText = wx.TextCtrl(self.panel, -1, str(self.villages[set][selected_vil].preset), pos=(515, 60), size=(16, 16))
+        self.attackNum = wx.StaticText(self.panel, -1, "Number of attacks: " + str(len(self.villages[set])), pos=(210, 305))
+        self.presetNum = wx.StaticText(self.panel, -1, self.makePresetText(), pos=(210, 335))
+
+    def makePresetText(self):
+        set = self.set_list.GetSelection()
+        text = "Presets:"
+        for each in ['-1', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
+            num = 0
+            for vil in self.villages[set]:
+                if str(vil.preset) == each:
+                    num += 1
+            if num>0:
+                text += " " + each + "->" + str(num) + " | "
+        return text
 
     def onClose(self, e):
         dlg = wx.MessageDialog(self,

@@ -79,9 +79,7 @@ def attack(w, vil):
     send_clear(w)
     type(w, vil.pos[1])
     click(w, (pos[0] + MOVE_FROM_COORD, pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
-    time.sleep(0.75)
-    type(w, vil.preset)
-    time.sleep(0.75)
+    time.sleep(1.5 + 1.5*random.random())
     type(w, vil.preset)
 
 if __name__=='__main__':
