@@ -33,7 +33,7 @@ def find_wold_map_pos(handle):
 
 def type(handle, text):
     time.sleep(0.3)
-    for each in text:
+    for each in str(text):
         win32gui.PostMessage(handle, WM_CHAR, ord(each), 0)
 
 
@@ -79,9 +79,9 @@ def attack(w, vil):
     send_clear(w)
     type(w, vil.pos[1])
     click(w, (pos[0] + MOVE_FROM_COORD, pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
-    time.sleep(0.6)
+    time.sleep(0.75)
     type(w, vil.preset)
-    time.sleep(0.6)
+    time.sleep(0.75)
     type(w, vil.preset)
 
 if __name__=='__main__':

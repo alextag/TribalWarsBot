@@ -6,10 +6,10 @@ class village():
         self.pos = (str(pos[0]),str(pos[1]))
         self.preset = str(preset)
 
-    def distance(self, other):
-        xs = np.power((self.pos[0]-other.pos[0]), 2)
-        ys = np.power((self.pos[1]-other.pos[1]), 2)
-        return np.sqrt(xs + (0.75*ys))
+    #def distance(self, other):
+    #    xs = np.power((self.pos[0]-other.pos[0]), 2)
+    #    ys = np.power((self.pos[1]-other.pos[1]), 2)
+    #    return np.sqrt(xs + (0.75*ys))
 
     def __str__(self):
         return "("+str(self.pos[0])+"|"+str(self.pos[1])+") - Preset: " + str(self.preset)

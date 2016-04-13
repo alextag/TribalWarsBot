@@ -1,6 +1,7 @@
 import os, time, random, win32gui, sys, wx, pickle
 from win32con import *
 from utilities import village, WindowMgr
+from main import *
 
 class BotGUI(wx.Frame):
 
@@ -17,12 +18,13 @@ class BotGUI(wx.Frame):
             self.sets.append("Default")
             self.villages.append([village((-1, -1), -1)])
 
-        self.set_list = wx.ListBox(self.panel, 2, pos=wx.Point(10, 5), size=(180, 300),
+        temp = wx.StaticText(self.panel, -1, "Attack sets: ", pos=(10, 5))
+        self.set_list = wx.ListBox(self.panel, 2, pos=wx.Point(10, 25), size=(180, 280),
                                    choices=self.sets, name='Sets')
         self.set_list.SetSelection(0)
 
-
-        self.vil_list = wx.ListBox(self.panel, 3, pos=wx.Point(210, 5), size=(250, 300),
+        temp = wx.StaticText(self.panel, -1, "Targets and preset key: ", pos=(210, 5))
+        self.vil_list = wx.ListBox(self.panel, 3, pos=wx.Point(210, 25), size=(250, 280),
                                    choices=[str(each) for each in self.villages[0]], name='Villages')
         self.vil_list.SetSelection(0)
 
@@ -31,8 +33,11 @@ class BotGUI(wx.Frame):
         self.selected_set = 0
         self.selected_vil = 0
 
-        self.addSetButton = wx.Button(self.panel, label="Add Set", pos=(10, 325))
+        self.addSetButton = wx.Button(self.panel, label="Add Set", pos=(10, 305))
         self.Bind(wx.EVT_BUTTON, self.addSet, self.addSetButton)
+
+        self.remSetButton = wx.Button(self.panel, label="Remove Set", pos=(10, 333))
+        self.Bind(wx.EVT_BUTTON, self.remSet, self.remSetButton)
 
         self.setUpButton = wx.Button(self.panel, label="UP", pos=(110, 325), size=(32,32))
         self.Bind(wx.EVT_BUTTON,self.setUp, self.setUpButton)
@@ -53,11 +58,24 @@ class BotGUI(wx.Frame):
         self.deleteAttackButton = wx.Button(self.panel, label="Delete", pos=(470,150), size=(110,50))
         self.Bind(wx.EVT_BUTTON, self.deleteAttack, self.deleteAttackButton)
 
+        self.runButton = wx.Button(self.panel, label="Run Set", pos=(480, 280), size=(80, 80))
+        self.Bind(wx.EVT_BUTTON, self.run, self.runButton)
+
+    def run(self, e):
+        selected_set = self.set_list.GetSelection()
+        attacks = self.villages[selected_set]
+        w = find_window()
+        pos = find_wold_map_pos(w)
+        click(w, pos)
+        for each in attacks:
+            if int(each.preset) == -1 or int(each.pos[0]) == -1 or int(each.pos[1]) == -1:
+                continue
+            attack(w, each)
+            time.sleep(random.random())
+
     def deleteAttack(self, e):
-        self.selected_set = self.set_list.GetSelection()
-        selected_set = self.selected_set
-        self.selected_vil = self.vil_list.GetSelection()
-        selected_vil = self.selected_vil
+        selected_set = self.set_list.GetSelection()
+        selected_vil = self.vil_list.GetSelection()
 
         if len(self.villages[selected_set]) == 1:
             self.newAttack(None)
@@ -66,35 +84,37 @@ class BotGUI(wx.Frame):
 
         self.onSetListBox(None)
         self.set_list.SetSelection(selected_set)
-        self.onVilListBox(None)
         new_selection = min(selected_vil, len(self.villages[selected_set])-1)
-
         self.vil_list.SetSelection(new_selection)
         self.resetTexts()
 
-
     def newAttack(self, e):
-        self.selected_set = self.set_list.GetSelection()
-        self.villages[self.selected_set].append(village((-1, -1), -1))
+        selected_set = self.set_list.GetSelection()
+        self.villages[selected_set].append(village((-1, -1), -1))
         self.onSetListBox(None)
-        self.set_list.SetSelection(self.selected_set)
-        self.onVilListBox(None)
-        self.vil_list.SetSelection(len(self.villages[self.selected_set])-1)
+        self.set_list.SetSelection(selected_set)
+        self.vil_list.SetSelection(len(self.villages[selected_set])-1)
+        self.resetTexts()
 
     def saveAttack(self, e):
-        self.selected_set = self.set_list.GetSelection()
-        selected_set = self.selected_set
-        self.selected_vil = self.vil_list.GetSelection()
-        selected_vil = self.selected_vil
+        selected_set = self.set_list.GetSelection()
+        selected_vil = self.vil_list.GetSelection()
 
-        pos = (int(self.coordText.GetValue()), int(self.coordText2.GetValue()))
-        preset = int(self.presetText.GetValue())
-        self.villages[self.selected_set][self.selected_vil].pos = pos
-        self.villages[self.selected_set][self.selected_vil].preset = preset
+        try:
+            pos = (str(int(self.coordText.GetValue())), str(int(self.coordText2.GetValue())))
+        except ValueError:
+            pos = ("-1", "-1")
+
+        try:
+            preset = int(self.presetText.GetValue())
+        except ValueError:
+            preset = "-1"
+
+        self.villages[selected_set][selected_vil].pos = pos
+        self.villages[selected_set][selected_vil].preset = preset
 
         self.onSetListBox(None)
         self.set_list.SetSelection(selected_set)
-        self.onVilListBox(None)
         self.vil_list.SetSelection(selected_vil)
         self.resetTexts()
 
@@ -111,11 +131,8 @@ class BotGUI(wx.Frame):
         self.sets[index] = self.sets[index-1]
         self.sets[index-1] = temp
 
-        self.set_list.Destroy()
-        self.set_list = wx.ListBox(self.panel, 2, pos=wx.Point(10, 5), size=(180, 300),
-                                   choices=self.sets, name='Sets')
+        self.resetSetListBox()
         self.set_list.SetSelection(index-1)
-        self.set_list.Bind(wx.EVT_LISTBOX, self.onSetListBox, id=2)
 
     def setDown(self,e ):
         index = self.set_list.GetSelection()
@@ -130,47 +147,62 @@ class BotGUI(wx.Frame):
         self.sets[index] = self.sets[index+1]
         self.sets[index+1] = temp
 
-        self.set_list.Destroy()
-        self.set_list = wx.ListBox(self.panel, 2, pos=wx.Point(10, 5), size=(180, 300),
-                                   choices=self.sets, name='Sets')
+        self.resetSetListBox()
         self.set_list.SetSelection(index+1)
-        self.set_list.Bind(wx.EVT_LISTBOX, self.onSetListBox, id=2)
 
     def addSet(self, e):
-        name = "Default Name"
-        box = wx.TextEntryDialog(None, "New Set Name:", "Choose set name", "Set Name")
+        name = "Set_name"
+        box = wx.TextEntryDialog(None, "New Attack Set Name:", "Choose attack set name", "Attack Set Name")
         if box.ShowModal() == wx.ID_OK:
             name = box.GetValue()
         else:
             return
         self.sets.append(name)
         self.villages.append([])
+        self.resetSetListBox()
+
+    def remSet(self, e):
+        selected_set = self.set_list.GetSelection()
+
+        if len(self.villages) <= 1:
+            return
+
+        del self.villages[selected_set]
+        del self.sets[selected_set]
+
+        self.resetSetListBox()
+        self.set_list.SetSelection(0)
+        self.onSetListBox(None)
+
+    def resetSetListBox(self):
         self.set_list.Destroy()
-        self.set_list = wx.ListBox(self.panel, 2, pos=wx.Point(10, 5), size=(180, 300),
+        self.set_list = wx.ListBox(self.panel, 2, pos=wx.Point(10, 25), size=(180, 280),
                                    choices=self.sets, name='Sets')
         self.set_list.Bind(wx.EVT_LISTBOX, self.onSetListBox, id=2)
+        self.set_list.SetSelection(len(self.villages) - 1)
 
     def onSetListBox(self, e):
         self.vil_list.Destroy()
-        self.selected_set = self.set_list.GetSelection()
-        self.vil_list = wx.ListBox(self.panel, 3, pos=wx.Point(210, 5), size=(250, 300),
-                                   choices=[str(each) for each in self.villages[self.selected_set]], name='Villages')
+        selected_set = self.set_list.GetSelection()
+
+        self.vil_list = wx.ListBox(self.panel, 3, pos=wx.Point(210, 25), size=(250, 280),
+                                   choices=[str(each) for each in self.villages[selected_set]], name='Villages')
         self.vil_list.Bind(wx.EVT_LISTBOX, self.onVilListBox, id=3)
-        self.selected_vil = 0
+        self.vil_list.SetSelection(0)
+        self.resetTexts()
 
     def onVilListBox(self, e):
-        self.selected_vil = self.vil_list.GetSelection()
         self.resetTexts()
 
     def resetTexts(self):
         self.coordText.Destroy()
         self.coordText2.Destroy()
         self.presetText.Destroy()
-        self.selected_vil = self.vil_list.GetSelection()
+        selected_vil = self.vil_list.GetSelection()
         set = self.set_list.GetSelection()
-        self.coordText = wx.TextCtrl(self.panel, -1, str(self.villages[set][self.selected_vil].pos[0]), pos=(480, 40), size=(40, 16))
-        self.coordText2 = wx.TextCtrl(self.panel, -1, str(self.villages[set][self.selected_vil].pos[1]), pos=(530, 40), size=(40, 16))
-        self.presetText = wx.TextCtrl(self.panel, -1, str(self.villages[set][self.selected_vil].preset), pos=(515, 60), size=(16, 16))
+        self.coordText = wx.TextCtrl(self.panel, -1, str(self.villages[set][selected_vil].pos[0]), pos=(480, 40), size=(40, 16))
+        self.coordText2 = wx.TextCtrl(self.panel, -1, str(self.villages[set][selected_vil].pos[1]), pos=(530, 40), size=(40, 16))
+        self.presetText = wx.TextCtrl(self.panel, -1, str(self.villages[set][selected_vil].preset), pos=(515, 60), size=(16, 16))
 
     def onClose(self, e):
         dlg = wx.MessageDialog(self,
