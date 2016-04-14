@@ -11,14 +11,16 @@ class BotGUI(wx.Frame):
         self.panel = wx.Panel(self)
 
         self.sets = []
+        self.setHomes = []
         self.villages = []
         try:
             self.load_data()
         except IOError:
             self.sets.append("First Village")
+            self.setHomes.append((500, 500))
             self.villages.append([village((-1, -1), -1)])
 
-        temp = wx.StaticText(self.panel, -1, "Attack sets: ", pos=(10, 5))
+        temp = wx.StaticText(self.panel, -1, "Attacking village: ", pos=(10, 5))
         self.set_list = wx.ListBox(self.panel, 2, pos=wx.Point(10, 25), size=(180, 280),
                                    choices=self.sets, name='Sets')
         self.set_list.SetSelection(0)
@@ -49,14 +51,21 @@ class BotGUI(wx.Frame):
         self.newAttackButton = wx.Button(self.panel, label="Create New Attack", pos=(470, 5), size=(110, 25))
         self.Bind(wx.EVT_BUTTON, self.newAttack, self.newAttackButton)
 
+        self.homeCoordText = wx.TextCtrl(self.panel, -1, str(self.setHomes[0][0]), pos=(105, 5), size=(40, 16))
+        self.homeCoordText.Bind(wx.EVT_TEXT, self.saveHome)
+        self.homeCoordText2 = wx.TextCtrl(self.panel, -1, str(self.setHomes[0][1]), pos=(150, 5), size=(40, 16))
+        self.homeCoordText2.Bind(wx.EVT_TEXT, self.saveHome)
         self.coordText = wx.TextCtrl(self.panel, -1, str(self.villages[0][0].pos[0]), pos=(480, 40), size=(40, 16))
+        self.coordText.Bind(wx.EVT_TEXT, self.saveAttack)
         self.coordText2 = wx.TextCtrl(self.panel, -1, str(self.villages[0][0].pos[1]), pos=(530, 40), size=(40, 16))
+        self.coordText2.Bind(wx.EVT_TEXT, self.saveAttack)
         self.presetText = wx.TextCtrl(self.panel, -1, str(self.villages[0][0].preset), pos=(515, 60), size=(16, 16))
+        self.presetText.Bind(wx.EVT_TEXT, self.saveAttack)
 
-        self.saveAttackButton = wx.Button(self.panel, label="Save", pos=(470,90), size=(110,50))
-        self.Bind(wx.EVT_BUTTON, self.saveAttack, self.saveAttackButton)
+        #self.saveAttackButton = wx.Button(self.panel, label="Save", pos=(470,90), size=(110,50))
+        #self.Bind(wx.EVT_BUTTON, self.saveAttack, self.saveAttackButton)
 
-        self.deleteAttackButton = wx.Button(self.panel, label="Delete", pos=(470,150), size=(110,50))
+        self.deleteAttackButton = wx.Button(self.panel, label="Delete", pos=(525, 105), size=(50, 50))
         self.Bind(wx.EVT_BUTTON, self.deleteAttack, self.deleteAttackButton)
 
         self.runButton = wx.Button(self.panel, label="Run Set", pos=(480, 280), size=(80, 80))
@@ -64,6 +73,14 @@ class BotGUI(wx.Frame):
 
         self.attackNum = wx.StaticText(self.panel, -1, "Number of attacks: " + str(len(self.villages[0])), pos=(210, 305))
         self.presetNum = wx.StaticText(self.panel, -1, self.makePresetText(), pos=(210, 335))
+
+    def saveHome(self, e):
+        selected_set = self.set_list.GetSelection()
+        try:
+            pos = (str(int(self.homeCoordText.GetValue())), str(int(self.homeCoordText2.GetValue())))
+        except ValueError:
+            pos = ("500", "500")
+        self.setHomes[selected_set] = pos
 
     def run(self, e):
         selected_set = self.set_list.GetSelection()
@@ -117,10 +134,10 @@ class BotGUI(wx.Frame):
         self.villages[selected_set][selected_vil].pos = pos
         self.villages[selected_set][selected_vil].preset = preset
 
-        self.onSetListBox(None)
+        self.onSetListBox(None, False)
         self.set_list.SetSelection(selected_set)
         self.vil_list.SetSelection(selected_vil)
-        self.resetTexts()
+        #self.resetTexts()
 
     def setUp(self, e):
         index = self.set_list.GetSelection()
@@ -188,9 +205,16 @@ class BotGUI(wx.Frame):
         self.set_list.Bind(wx.EVT_LISTBOX, self.onSetListBox, id=2)
         self.set_list.SetSelection(len(self.villages) - 1)
 
-    def onSetListBox(self, e):
+    def onSetListBox(self, e, resetTexts=True):
         self.vil_list.Destroy()
         selected_set = self.set_list.GetSelection()
+
+        self.homeCoordText.Destroy()
+        self.homeCoordText2.Destroy()
+        self.homeCoordText = wx.TextCtrl(self.panel, -1, str(self.setHomes[selected_set][0]), pos=(105, 5), size=(40, 16))
+        self.homeCoordText.Bind(wx.EVT_TEXT, self.saveHome)
+        self.homeCoordText2 = wx.TextCtrl(self.panel, -1, str(self.setHomes[selected_set][1]), pos=(150, 5), size=(40, 16))
+        self.homeCoordText2.Bind(wx.EVT_TEXT, self.saveHome)
 
         self.vil_list = wx.ListBox(self.panel, 3, pos=wx.Point(210, 25), size=(250, 280),
                                    choices=[str(each) for each in self.villages[selected_set]], name='Villages')
@@ -198,22 +222,28 @@ class BotGUI(wx.Frame):
         if (len(self.villages[selected_set])<1):
             self.newAttack(None)
         self.vil_list.SetSelection(0)
-        self.resetTexts()
+        if resetTexts:
+            self.resetTexts()
 
     def onVilListBox(self, e):
         self.resetTexts()
 
     def resetTexts(self):
+        selected_vil = self.vil_list.GetSelection()
+        set = self.set_list.GetSelection()
+
         self.coordText.Destroy()
         self.coordText2.Destroy()
         self.presetText.Destroy()
         self.attackNum.Destroy()
         self.presetNum.Destroy()
-        selected_vil = self.vil_list.GetSelection()
-        set = self.set_list.GetSelection()
+
         self.coordText = wx.TextCtrl(self.panel, -1, str(self.villages[set][selected_vil].pos[0]), pos=(480, 40), size=(40, 16))
         self.coordText2 = wx.TextCtrl(self.panel, -1, str(self.villages[set][selected_vil].pos[1]), pos=(530, 40), size=(40, 16))
         self.presetText = wx.TextCtrl(self.panel, -1, str(self.villages[set][selected_vil].preset), pos=(515, 60), size=(16, 16))
+        self.coordText.Bind(wx.EVT_TEXT, self.saveAttack)
+        self.coordText2.Bind(wx.EVT_TEXT, self.saveAttack)
+        self.presetText.Bind(wx.EVT_TEXT, self.saveAttack)
         self.attackNum = wx.StaticText(self.panel, -1, "Number of attacks: " + str(len(self.villages[set])), pos=(210, 305))
         self.presetNum = wx.StaticText(self.panel, -1, self.makePresetText(), pos=(210, 335))
 
@@ -244,7 +274,7 @@ class BotGUI(wx.Frame):
         with open('data.pkl', 'wb') as output:
             data = []
             for i in range(len(self.sets)):
-                data.append((self.sets[i], self.villages[i]))
+                data.append((self.sets[i], self.setHomes[i],  self.villages[i]))
             pickle.dump(data, output)
 
     def load_data(self):
@@ -253,7 +283,8 @@ class BotGUI(wx.Frame):
             input.close()
         for each in data:
             self.sets.append(each[0])
-            self.villages.append(each[1])
+            self.setHomes.append(each[1])
+            self.villages.append(each[2])
         return
 
 if __name__ == '__main__':
