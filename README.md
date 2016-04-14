@@ -3,6 +3,10 @@ Using python to automate Tribal Wars 2 farming
 This was tested on Tribal Wars 2 (1.51)
 ### Browsers supported: 
 Firefox (tested), Internet Explorer(Not tested), Google Chrome(Not working).
+### Libraries used:
+- wxPython (GUI)
+- pywin32 (windows interaction)
+- pickle (quick saving/loading)
 
 ### Instructions:
 - Make sure you have only one window open with "Tribal Wars 2" in the name (be it a browser tab or an open folder, etc...).
