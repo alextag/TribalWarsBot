@@ -82,10 +82,14 @@ def attack(w, vil):
     time.sleep(1.5 + 1.5*random.random())
     type(w, vil.preset)
 
+def close_world_map(w):
+    click(w, (390, 95))
+
 if __name__=='__main__':
     w = find_window()
     pos = find_wold_map_pos(w)
     click(w, pos)
-    attack(w, village(('454', '409'), '9'))
-    attack(w, village(('454', '412'), '9'))
+    close_world_map(w)
+    #attack(w, village(('454', '409'), '9'))
+    #attack(w, village(('454', '412'), '9'))
 

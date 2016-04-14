@@ -87,6 +87,7 @@ class BotGUI(wx.Frame):
         attacks = self.villages[selected_set]
         w = find_window()
         pos = find_wold_map_pos(w)
+        close_world_map(w)
         click(w, pos)
         for each in attacks:
             if int(each.preset) == -1 or int(each.pos[0]) == -1 or int(each.pos[1]) == -1:
@@ -179,6 +180,7 @@ class BotGUI(wx.Frame):
         else:
             return
         self.sets.append(name)
+        self.setHomes.append(('500', '500'))
         self.villages.append([])
 
         self.resetSetListBox()
@@ -193,6 +195,7 @@ class BotGUI(wx.Frame):
 
         del self.villages[selected_set]
         del self.sets[selected_set]
+        del self.setHomes[selected_set]
 
         self.resetSetListBox()
         self.set_list.SetSelection(0)
