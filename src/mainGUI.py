@@ -64,11 +64,14 @@ class BotGUI(wx.Frame):
         self.presetText = wx.TextCtrl(self.panel, -1, str(self.villages[0][0].preset), pos=(515, 60), size=(16, 16))
         self.presetText.Bind(wx.EVT_TEXT, self.saveAttack)
 
+
         #self.saveAttackButton = wx.Button(self.panel, label="Save", pos=(470,90), size=(110,50))
         #self.Bind(wx.EVT_BUTTON, self.saveAttack, self.saveAttackButton)
 
         self.deleteAttackButton = wx.Button(self.panel, label="Delete", pos=(525, 105), size=(50, 50))
         self.Bind(wx.EVT_BUTTON, self.deleteAttack, self.deleteAttackButton)
+
+        self.continueCheckBox = wx.CheckBox(self.panel, -1, label=" Continue from \n selected attack", pos=(470, 190))
 
         self.runButton = wx.Button(self.panel, label="Run Set", pos=(470, 225), size=(100, 80))
         self.Bind(wx.EVT_BUTTON, self.run, self.runButton)
@@ -91,7 +94,10 @@ class BotGUI(wx.Frame):
         else:
             selected_set = self.set_list.GetSelection()
             selected_vil = self.vil_list.GetSelection()
-            self.thread = myThread(list(self.villages[selected_set][selected_vil:]), doneFunc, self)
+            if self.continueCheckBox.Get3StateValue():
+                self.thread = myThread(list(self.villages[selected_set][selected_vil:]), doneFunc, self)
+            else:
+                self.thread = myThread(list(self.villages[selected_set]), doneFunc, self)
             self.thread.start()
 
             self.runButton.SetLabelText("Stop Set")
