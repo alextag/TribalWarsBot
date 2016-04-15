@@ -195,18 +195,24 @@ class BotGUI(wx.Frame):
         self.onSetListBox(None)
 
     def remSet(self, e):
-        selected_set = self.set_list.GetSelection()
+        dlg = wx.MessageDialog(self,
+            "Do you really want to delete this set?",
+            "Confirm Deletion", wx.OK|wx.CANCEL|wx.ICON_QUESTION)
+        result = dlg.ShowModal()
+        dlg.Destroy()
+        if result == wx.ID_OK:
+            selected_set = self.set_list.GetSelection()
 
-        if len(self.villages) <= 1:
-            return
+            if len(self.villages) <= 1:
+                return
 
-        del self.villages[selected_set]
-        del self.sets[selected_set]
-        del self.setHomes[selected_set]
+            del self.villages[selected_set]
+            del self.sets[selected_set]
+            del self.setHomes[selected_set]
 
-        self.resetSetListBox()
-        self.set_list.SetSelection(0)
-        self.onSetListBox(None)
+            self.resetSetListBox()
+            self.set_list.SetSelection(0)
+            self.onSetListBox(None)
 
     def resetSetListBox(self):
         self.set_list.Destroy()
@@ -259,7 +265,7 @@ class BotGUI(wx.Frame):
 
     def makePresetText(self):
         set = self.set_list.GetSelection()
-        text = "Presets:"
+        text = "Presets Used:"
         for each in ['-1', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
             num = 0
             for vil in self.villages[set]:
@@ -297,8 +303,13 @@ class BotGUI(wx.Frame):
             self.villages.append(each[2])
         return
 
-def doneFunc(orig):
+def doneFunc(orig, each):
     orig.runButton.SetLabelText("Run Set")
+    try:
+        orig.vil_list.SetSelection(each)
+    except PyAssertionError:
+        return
+    return
 
 if __name__ == '__main__':
     app = wx.App()

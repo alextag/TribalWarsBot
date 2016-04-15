@@ -25,16 +25,17 @@ class myThread (threading.Thread):
         pos = find_wold_map_pos(w)
         close_world_map(w)
         click(w, pos)
+        count = 0
         for each in attacks:
             if self._stop.isSet():
                 break
             if int(each.preset) == -1 or int(each.pos[0]) == -1 or int(each.pos[1]) == -1:
                 continue
-            self.attack(w, each)
+            done = self.attack(w, each)
+            if done:
+                count += 1
             time.sleep(random.random())
-            if self._stop.isSet():
-                break
-        self.doneFunc(self.orig)
+        self.doneFunc(self.orig, count)
         return
 
     def attack(self, w, vil):
@@ -42,35 +43,36 @@ class myThread (threading.Thread):
         click(w, (pos[0], pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
         time.sleep(0.3)
         if self._stop.isSet():
-            return
+            return False
         send_clear(w) # CTR-A + backspace or delete
         if self._stop.isSet():
-            return
+            return False
         type(w, vil.pos[0])
         if self._stop.isSet():
-            return
+            return False
         time.sleep(0.1)
         if self._stop.isSet():
-            return
+            return False
         send_tab(w)
         if self._stop.isSet():
-            return
+            return False
         time.sleep(0.1)
         if self._stop.isSet():
-            return
+            return False
         send_clear(w)
         if self._stop.isSet():
-            return
+            return False
         type(w, vil.pos[1])
         if self._stop.isSet():
-            return
+            return False
         click(w, (pos[0] + MOVE_FROM_COORD, pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
         if self._stop.isSet():
-            return
+            return False
         time.sleep(1.5 + 1.5*random.random())
         if self._stop.isSet():
-            return
+            return False
         type(w, vil.preset)
+        return True
 
 
 def click(handle, pos):
