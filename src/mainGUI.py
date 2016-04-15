@@ -1,4 +1,4 @@
-import os, time, random, win32gui, sys, wx, pickle
+import random, win32gui, sys, wx, pickle, threading
 from win32con import *
 from utilities import village, WindowMgr
 from main import *
@@ -10,6 +10,7 @@ class BotGUI(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.onClose)
         self.panel = wx.Panel(self)
 
+        self.thread = None
         self.sets = []
         self.setHomes = []
         self.villages = []
@@ -24,6 +25,7 @@ class BotGUI(wx.Frame):
         self.set_list = wx.ListBox(self.panel, 2, pos=wx.Point(10, 25), size=(180, 280),
                                    choices=self.sets, name='Sets')
         self.set_list.SetSelection(0)
+        self.thread = myThread(self.villages[0])
 
         temp = wx.StaticText(self.panel, -1, "Targets and preset key: ", pos=(210, 5))
 
@@ -68,7 +70,7 @@ class BotGUI(wx.Frame):
         self.deleteAttackButton = wx.Button(self.panel, label="Delete", pos=(525, 105), size=(50, 50))
         self.Bind(wx.EVT_BUTTON, self.deleteAttack, self.deleteAttackButton)
 
-        self.runButton = wx.Button(self.panel, label="Run Set", pos=(480, 280), size=(80, 80))
+        self.runButton = wx.Button(self.panel, label="Run Set", pos=(470, 225), size=(100, 80))
         self.Bind(wx.EVT_BUTTON, self.run, self.runButton)
 
         self.attackNum = wx.StaticText(self.panel, -1, "Number of attacks: " + str(len(self.villages[0])), pos=(210, 305))
@@ -83,17 +85,20 @@ class BotGUI(wx.Frame):
         self.setHomes[selected_set] = pos
 
     def run(self, e):
-        selected_set = self.set_list.GetSelection()
-        attacks = self.villages[selected_set]
-        w = find_window()
-        pos = find_wold_map_pos(w)
-        close_world_map(w)
-        click(w, pos)
-        for each in attacks:
-            if int(each.preset) == -1 or int(each.pos[0]) == -1 or int(each.pos[1]) == -1:
-                continue
-            attack(w, each)
-            time.sleep(random.random())
+        if threading.activeCount() > 1:
+            self.thread.stop()
+
+            self.runButton.Destroy()
+            self.runButton = wx.Button(self.panel, label="Run Set", pos=(470, 225), size=(100, 80))
+            self.Bind(wx.EVT_BUTTON, self.run, self.runButton)
+        else:
+            selected_set = self.set_list.GetSelection()
+            self.thread = myThread(self.villages[selected_set])
+            self.thread.start()
+
+            self.runButton.Destroy()
+            self.runButton = wx.Button(self.panel, label="Stop Set", pos=(470, 225), size=(100, 80))
+            self.Bind(wx.EVT_BUTTON, self.run, self.runButton)
 
     def deleteAttack(self, e):
         selected_set = self.set_list.GetSelection()

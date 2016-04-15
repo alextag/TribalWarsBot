@@ -1,10 +1,73 @@
-import os, time, random, win32gui, sys
+import os, time, random, win32gui, sys, threading
 from win32con import *
 from utilities import village, WindowMgr
 
 WORLD_FROM_BOTTOM = 55
 XCOORD_FROM_BOTTOM = 185
 MOVE_FROM_COORD = 200
+
+
+class myThread (threading.Thread):
+
+    def __init__(self, attacks):
+        threading.Thread.__init__(self)
+        self.attacks = attacks
+        self._stop = threading.Event()
+
+    def stop(self):
+        self._stop.set()
+
+    def run(self):
+        attacks = self.attacks
+        w = find_window()
+        pos = find_wold_map_pos(w)
+        close_world_map(w)
+        click(w, pos)
+        for each in attacks:
+            if self._stop.isSet():
+                break
+            if int(each.preset) == -1 or int(each.pos[0]) == -1 or int(each.pos[1]) == -1:
+                continue
+            self.attack(w, each)
+            time.sleep(random.random())
+            if self._stop.isSet():
+                break
+        return
+
+    def attack(self, w, vil):
+        pos = find_wold_map_pos(w)
+        click(w, (pos[0], pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
+        time.sleep(0.3)
+        if self._stop.isSet():
+            return
+        send_clear(w) # CTR-A + backspace or delete
+        if self._stop.isSet():
+            return
+        type(w, vil.pos[0])
+        if self._stop.isSet():
+            return
+        time.sleep(0.1)
+        if self._stop.isSet():
+            return
+        send_tab(w)
+        if self._stop.isSet():
+            return
+        time.sleep(0.1)
+        if self._stop.isSet():
+            return
+        send_clear(w)
+        if self._stop.isSet():
+            return
+        type(w, vil.pos[1])
+        if self._stop.isSet():
+            return
+        click(w, (pos[0] + MOVE_FROM_COORD, pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
+        if self._stop.isSet():
+            return
+        time.sleep(1.5 + 1.5*random.random())
+        if self._stop.isSet():
+            return
+        type(w, vil.preset)
 
 
 def click(handle, pos):
