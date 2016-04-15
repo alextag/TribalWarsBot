@@ -25,7 +25,7 @@ class BotGUI(wx.Frame):
         self.set_list = wx.ListBox(self.panel, 2, pos=wx.Point(10, 25), size=(180, 280),
                                    choices=self.sets, name='Sets')
         self.set_list.SetSelection(0)
-        self.thread = myThread(self.villages[0])
+        self.thread = myThread(self.villages[0], doneFunc, self)
 
         temp = wx.StaticText(self.panel, -1, "Targets and preset key: ", pos=(210, 5))
 
@@ -87,18 +87,14 @@ class BotGUI(wx.Frame):
     def run(self, e):
         if threading.activeCount() > 1:
             self.thread.stop()
-
-            self.runButton.Destroy()
-            self.runButton = wx.Button(self.panel, label="Run Set", pos=(470, 225), size=(100, 80))
-            self.Bind(wx.EVT_BUTTON, self.run, self.runButton)
+            self.runButton.SetLabelText("Stopping Set")
         else:
             selected_set = self.set_list.GetSelection()
-            self.thread = myThread(self.villages[selected_set])
+            selected_vil = self.vil_list.GetSelection()
+            self.thread = myThread(list(self.villages[selected_set][selected_vil:]), doneFunc, self)
             self.thread.start()
 
-            self.runButton.Destroy()
-            self.runButton = wx.Button(self.panel, label="Stop Set", pos=(470, 225), size=(100, 80))
-            self.Bind(wx.EVT_BUTTON, self.run, self.runButton)
+            self.runButton.SetLabelText("Stop Set")
 
     def deleteAttack(self, e):
         selected_set = self.set_list.GetSelection()
@@ -128,12 +124,12 @@ class BotGUI(wx.Frame):
         selected_vil = self.vil_list.GetSelection()
 
         try:
-            pos = (str(int(self.coordText.GetValue())), str(int(self.coordText2.GetValue())))
+            pos = (str(abs(int(self.coordText.GetValue()))), str(abs(int(self.coordText2.GetValue()))))
         except ValueError:
             pos = ("-1", "-1")
 
         try:
-            preset = str(int(self.presetText.GetValue()))
+            preset = str(abs(int(self.presetText.GetValue())))
         except ValueError:
             preset = "-1"
 
@@ -294,6 +290,9 @@ class BotGUI(wx.Frame):
             self.setHomes.append(each[1])
             self.villages.append(each[2])
         return
+
+def doneFunc(orig):
+    orig.runButton.SetLabelText("Run Set")
 
 if __name__ == '__main__':
     app = wx.App()

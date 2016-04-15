@@ -9,10 +9,12 @@ MOVE_FROM_COORD = 200
 
 class myThread (threading.Thread):
 
-    def __init__(self, attacks):
+    def __init__(self, attacks, doneFunc, orig):
         threading.Thread.__init__(self)
         self.attacks = attacks
         self._stop = threading.Event()
+        self.doneFunc = doneFunc
+        self.orig = orig
 
     def stop(self):
         self._stop.set()
@@ -32,6 +34,7 @@ class myThread (threading.Thread):
             time.sleep(random.random())
             if self._stop.isSet():
                 break
+        self.doneFunc(self.orig)
         return
 
     def attack(self, w, vil):
