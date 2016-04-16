@@ -7,6 +7,7 @@ Firefox (Works), Internet Explorer(Not tested), Google Chrome(Sometimes works).
 - wxPython (GUI)
 - pywin32 (windows interaction)
 - pickle (quick saving/loading)
+- py2exe (exe building)
 
 ### Instructions:
 - Make sure you have only one window open with "Tribal Wars 2" in the name (be it a browser tab or an open folder, etc...).
