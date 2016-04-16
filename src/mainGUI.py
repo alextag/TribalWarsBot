@@ -305,10 +305,7 @@ class BotGUI(wx.Frame):
 
 def doneFunc(orig, each):
     orig.runButton.SetLabelText("Run Set")
-    try:
-        orig.vil_list.SetSelection(each)
-    except PyAssertionError:
-        return
+    orig.vil_list.SetSelection(each)
     return
 
 if __name__ == '__main__':

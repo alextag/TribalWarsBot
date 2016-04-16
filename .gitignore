@@ -108,3 +108,6 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 *.pkl
+.idea/workspace.xml
+*.xml
+*.iml

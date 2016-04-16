@@ -35,6 +35,8 @@ class myThread (threading.Thread):
             if done:
                 count += 1
             time.sleep(random.random())
+        if count >= len(attacks):
+            count = 0
         self.doneFunc(self.orig, count)
         return
 
