@@ -1,8 +1,8 @@
 # TribalWarsBot
-Using python to automate Tribal Wars 2 farming
+Using python to automate Tribal Wars 2 farming by sending events directly to the game window.
 This was tested on Tribal Wars 2 (1.51)
 ### Browsers supported: 
-Firefox (Works), Internet Explorer(Not tested), Google Chrome(Sometimes works).
+Firefox (Works), Internet Explorer(Not tested), Google Chrome(Works).
 ### Libraries used:
 - wxPython (GUI)
 - pywin32 (windows interaction)
