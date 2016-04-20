@@ -9,12 +9,13 @@ MOVE_FROM_COORD = 200
 
 class myThread (threading.Thread):
 
-    def __init__(self, attacks, doneFunc, orig):
+    def __init__(self, attacks, doneFunc, orig, delay):
         threading.Thread.__init__(self)
         self.attacks = attacks
         self._stop = threading.Event()
         self.doneFunc = doneFunc
         self.orig = orig
+        self.delay = delay
 
     def stop(self):
         self._stop.set()
@@ -22,6 +23,9 @@ class myThread (threading.Thread):
     def run(self):
         attacks = self.attacks
         w = find_window()
+        if w == None:
+            self.doneFunc(self.orig, 0)
+            return
         pos = find_wold_map_pos(w)
         close_world_map(w)
         click(w, pos)
@@ -43,9 +47,10 @@ class myThread (threading.Thread):
     def attack(self, w, vil):
         pos = find_wold_map_pos(w)
         click(w, (pos[0], pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
-        time.sleep(0.3)
+        time.sleep(0.1)
         if self._stop.isSet():
             return False
+        clickDragLeft(w, (pos[0], pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
         send_clear(w) # CTR-A + backspace or delete
         if self._stop.isSet():
             return False
@@ -70,7 +75,7 @@ class myThread (threading.Thread):
         click(w, (pos[0] + MOVE_FROM_COORD, pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
         if self._stop.isSet():
             return False
-        time.sleep(1.5 + 1.5*random.random())
+        time.sleep((self.delay/1000.0) + 1.5*random.random())
         if self._stop.isSet():
             return False
         type(w, vil.preset)
@@ -83,6 +88,21 @@ def click(handle, pos):
     time.sleep(0.1)
     win32gui.PostMessage(handle, WM_LBUTTONUP, MK_LBUTTON, lParam )
 
+def clickDragLeft(handle, pos):
+    lParam = (pos[1] << 16) | pos[0]
+    win32gui.PostMessage(handle, WM_LBUTTONDOWN, MK_LBUTTON, lParam )
+
+    lParam2 = (pos[1] << 16) | max(pos[0]-100,0)
+    win32gui.PostMessage(handle, WM_MOUSEMOVE, MK_LBUTTON, lParam2)
+    win32gui.PostMessage(handle, WM_LBUTTONUP, MK_LBUTTON, lParam )
+
+def clickDragRight(handle, pos):
+    lParam = (pos[1] << 16) | pos[0]
+    win32gui.PostMessage(handle, WM_LBUTTONDOWN, MK_LBUTTON, lParam )
+
+    lParam2 = (pos[1] << 16) | max(pos[0]+200,0)
+    win32gui.PostMessage(handle, WM_MOUSEMOVE, MK_LBUTTON, lParam2)
+    win32gui.PostMessage(handle, WM_LBUTTONUP, MK_LBUTTON, lParam )
 
 def right_click(handle, pos):
     lParam = (pos[1] << 16) | pos[0]
@@ -112,23 +132,14 @@ def find_window():
     w.find_window_wildcard(".*Tribal Wars 2.*")
     if w._handle is None:
         print ("Could not find requested window")
-        sys.exit(-1)
+        return None
     return w
 
 
 def send_clear(handle):
     win32gui.PostMessage(handle, WM_KEYDOWN, VK_DELETE, 0)
-    win32gui.PostMessage(handle, WM_KEYDOWN, VK_DELETE, 0)
-    win32gui.PostMessage(handle, WM_KEYDOWN, VK_DELETE, 0)
-    win32gui.PostMessage(handle, WM_KEYDOWN, VK_DELETE, 0)
     time.sleep(0.1)
     win32gui.PostMessage(handle, WM_KEYUP, VK_DELETE, 0)
-    win32gui.PostMessage(handle, WM_KEYDOWN, VK_BACK, 0)
-    win32gui.PostMessage(handle, WM_KEYDOWN, VK_BACK, 0)
-    win32gui.PostMessage(handle, WM_KEYDOWN, VK_BACK, 0)
-    win32gui.PostMessage(handle, WM_KEYDOWN, VK_BACK, 0)
-    time.sleep(0.1)
-    win32gui.PostMessage(handle, WM_KEYUP, VK_BACK, 0)
 
 
 def send_tab(handle):
@@ -140,8 +151,10 @@ def send_tab(handle):
 def attack(w, vil):
     pos = find_wold_map_pos(w)
     click(w, (pos[0], pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
-    time.sleep(0.3)
-    send_clear(w) # CTR-A + backspace or delete
+    time.sleep(0.1)
+    clickDragLeft(w, (pos[0], pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
+    send_clear(w)  # CTR-A + backspace or delete
+    time.sleep(0.1)
     type(w, vil.pos[0])
     time.sleep(0.1)
     send_tab(w)
@@ -153,13 +166,15 @@ def attack(w, vil):
     type(w, vil.preset)
 
 def close_world_map(w):
-    click(w, (390, 95))
+    click(w, (110, 95))
 
 if __name__=='__main__':
     w = find_window()
     pos = find_wold_map_pos(w)
-    click(w, pos)
     close_world_map(w)
-    #attack(w, village(('454', '409'), '9'))
+    click(w, pos)
+
+    #close_world_map(w)
+    attack(w, village(('454', '409'), '9'))
     #attack(w, village(('454', '412'), '9'))
 

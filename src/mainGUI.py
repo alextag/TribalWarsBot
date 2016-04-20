@@ -10,6 +10,7 @@ class BotGUI(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.onClose)
         self.panel = wx.Panel(self)
 
+        self.maptoattackdelay = 1500
         self.thread = None
         self.sets = []
         self.setHomes = []
@@ -25,7 +26,7 @@ class BotGUI(wx.Frame):
         self.set_list = wx.ListBox(self.panel, 2, pos=wx.Point(10, 25), size=(180, 280),
                                    choices=self.sets, name='Sets')
         self.set_list.SetSelection(0)
-        self.thread = myThread(self.villages[0], doneFunc, self)
+        self.thread = myThread(self.villages[0], doneFunc, self, self.maptoattackdelay)
 
         temp = wx.StaticText(self.panel, -1, "Targets and preset key: ", pos=(210, 5))
 
@@ -44,10 +45,10 @@ class BotGUI(wx.Frame):
         self.remSetButton = wx.Button(self.panel, label="Remove Set", pos=(10, 333))
         self.Bind(wx.EVT_BUTTON, self.remSet, self.remSetButton)
 
-        self.setUpButton = wx.Button(self.panel, label="UP", pos=(110, 325), size=(32,32))
+        self.setUpButton = wx.Button(self.panel, label="UP", pos=(110, 325), size=(32, 32))
         self.Bind(wx.EVT_BUTTON,self.setUp, self.setUpButton)
 
-        self.setDownButton = wx.Button(self.panel, label="DOWN", pos=(150, 325), size=(48,32))
+        self.setDownButton = wx.Button(self.panel, label="DOWN", pos=(150, 325), size=(48, 32))
         self.Bind(wx.EVT_BUTTON, self.setDown, self.setDownButton)
 
         self.newAttackButton = wx.Button(self.panel, label="Create New Attack", pos=(470, 5), size=(110, 25))
@@ -68,7 +69,7 @@ class BotGUI(wx.Frame):
         #self.saveAttackButton = wx.Button(self.panel, label="Save", pos=(470,90), size=(110,50))
         #self.Bind(wx.EVT_BUTTON, self.saveAttack, self.saveAttackButton)
 
-        self.deleteAttackButton = wx.Button(self.panel, label="Delete", pos=(525, 105), size=(50, 50))
+        self.deleteAttackButton = wx.Button(self.panel, label="Delete", pos=(525, 85), size=(50, 30))
         self.Bind(wx.EVT_BUTTON, self.deleteAttack, self.deleteAttackButton)
 
         self.continueCheckBox = wx.CheckBox(self.panel, -1, label=" Continue from \n selected attack", pos=(470, 190))
@@ -78,6 +79,15 @@ class BotGUI(wx.Frame):
 
         self.attackNum = wx.StaticText(self.panel, -1, "Number of attacks: " + str(len(self.villages[0])), pos=(210, 305))
         self.presetNum = wx.StaticText(self.panel, -1, self.makePresetText(), pos=(210, 335))
+
+        self.timeSlider = wx.Slider(self.panel, -1, value=self.maptoattackdelay, minValue=0, maxValue=5000, style=(wx.SL_HORIZONTAL|wx.SL_LABELS), pos=(480, 145))
+        self.timeSlider.Bind(wx.EVT_SLIDER, self.timeSliderScroll)
+
+        self.sliderText = wx.StaticText(self.panel, -1, "MapToAttack Delay: ", pos=(470, 120))
+        self.sliderText = wx.StaticText(self.panel, -1, "msec", pos=(535, 170))
+
+    def timeSliderScroll(self, e):
+        self.maptoattackdelay = self.timeSlider.GetValue()
 
     def saveHome(self, e):
         selected_set = self.set_list.GetSelection()
@@ -95,9 +105,9 @@ class BotGUI(wx.Frame):
             selected_set = self.set_list.GetSelection()
             selected_vil = self.vil_list.GetSelection()
             if self.continueCheckBox.Get3StateValue():
-                self.thread = myThread(list(self.villages[selected_set][selected_vil:]), doneFunc, self)
+                self.thread = myThread(list(self.villages[selected_set][selected_vil:]), doneFunc, self, self.maptoattackdelay)
             else:
-                self.thread = myThread(list(self.villages[selected_set]), doneFunc, self)
+                self.thread = myThread(list(self.villages[selected_set]), doneFunc, self, self.maptoattackdelay)
             self.thread.start()
 
             self.runButton.SetLabelText("Stop Set")
