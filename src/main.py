@@ -3,54 +3,72 @@ from win32con import *
 from utilities import village, WindowMgr
 
 WORLD_FROM_BOTTOM = 55
-XCOORD_FROM_BOTTOM = 185
+XCOORD_FROM_BOTTOM = 175
 MOVE_FROM_COORD = 200
+TIME_UNIT = 1.0
 
 
 class myThread (threading.Thread):
 
-    def __init__(self, attacks, doneFunc, orig, delay):
+    def __init__(self, attacks, doneFunc, orig, delay, repeatDelay, repeatFunc):
         threading.Thread.__init__(self)
         self.attacks = attacks
         self._stop = threading.Event()
         self.doneFunc = doneFunc
         self.orig = orig
         self.delay = delay
+        self.repeatDelay = repeatDelay
+        self.repeatFunc = repeatFunc
 
     def stop(self):
         self._stop.set()
 
     def run(self):
-        attacks = self.attacks
-        w = find_window()
-        if w == None:
-            self.doneFunc(self.orig, 0)
-            return
-        pos = find_wold_map_pos(w)
-        close_world_map(w)
-        click(w, pos)
+        repeat = self.repeatDelay * 60
+        timepassed = abs(repeat)
         count = 0
-        for each in attacks:
-            if self._stop.isSet():
-                break
-            if int(each.preset) == -1 or int(each.pos[0]) == -1 or int(each.pos[1]) == -1:
-                continue
-            done = self.attack(w, each)
-            if done:
-                count += 1
-            time.sleep(random.random())
-        if count >= len(attacks):
-            count = 0
+        denail = 0
+        while not self._stop.isSet():
+            if timepassed*TIME_UNIT > repeat + denail:
+                timepassed = 0
+                attacks = self.attacks
+                w = find_window()
+                if w is None:
+                    self.doneFunc(self.orig, 0)
+                    return
+                pos = find_wold_map_pos(w)
+                close_world_map(w)
+                click(w, pos)
+                count = 0
+                for each in attacks:
+                    if self._stop.isSet():
+                        self.doneFunc(self.orig, count)
+                        return
+                    if int(each.preset) == -1 or int(each.pos[0]) == -1 or int(each.pos[1]) == -1:
+                        continue
+                    done = self.attack(w, each)
+                    if done:
+                        count += 1
+                    time.sleep(random.random())
+                if count >= len(attacks):
+                    count = 0
+                if repeat < 0:
+                    break
+                denail = random.random()*0.1*repeat
+            else:
+                timepassed += 1
+                time.sleep(TIME_UNIT)
+                self.repeatFunc(self.orig, (repeat+denail) - timepassed*TIME_UNIT)
         self.doneFunc(self.orig, count)
         return
 
     def attack(self, w, vil):
         pos = find_wold_map_pos(w)
-        click(w, (pos[0], pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
+        click(w, (pos[0]-80, pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
         time.sleep(0.1)
         if self._stop.isSet():
             return False
-        clickDragLeft(w, (pos[0], pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
+        #clickDragLeft(w, (pos[0], pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
         send_clear(w) # CTR-A + backspace or delete
         if self._stop.isSet():
             return False
@@ -96,14 +114,6 @@ def clickDragLeft(handle, pos):
     win32gui.PostMessage(handle, WM_MOUSEMOVE, MK_LBUTTON, lParam2)
     win32gui.PostMessage(handle, WM_LBUTTONUP, MK_LBUTTON, lParam )
 
-def clickDragRight(handle, pos):
-    lParam = (pos[1] << 16) | pos[0]
-    win32gui.PostMessage(handle, WM_LBUTTONDOWN, MK_LBUTTON, lParam )
-
-    lParam2 = (pos[1] << 16) | max(pos[0]+200,0)
-    win32gui.PostMessage(handle, WM_MOUSEMOVE, MK_LBUTTON, lParam2)
-    win32gui.PostMessage(handle, WM_LBUTTONUP, MK_LBUTTON, lParam )
-
 def right_click(handle, pos):
     lParam = (pos[1] << 16) | pos[0]
     win32gui.PostMessage(handle, WM_RBUTTONDOWN, MK_RBUTTON, lParam )
@@ -138,7 +148,11 @@ def find_window():
 
 def send_clear(handle):
     win32gui.PostMessage(handle, WM_KEYDOWN, VK_DELETE, 0)
+    win32gui.PostMessage(handle, WM_KEYDOWN, VK_DELETE, 0)
+    win32gui.PostMessage(handle, WM_KEYDOWN, VK_DELETE, 0)
     time.sleep(0.1)
+    win32gui.PostMessage(handle, WM_KEYUP, VK_DELETE, 0)
+    win32gui.PostMessage(handle, WM_KEYUP, VK_DELETE, 0)
     win32gui.PostMessage(handle, WM_KEYUP, VK_DELETE, 0)
 
 
@@ -173,8 +187,9 @@ if __name__=='__main__':
     pos = find_wold_map_pos(w)
     close_world_map(w)
     click(w, pos)
+    right_click(w, (pos[0]-80, pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
 
     #close_world_map(w)
-    attack(w, village(('454', '409'), '9'))
+    #attack(w, village(('454', '409'), '9'))
     #attack(w, village(('454', '412'), '9'))
 

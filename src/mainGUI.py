@@ -10,8 +10,10 @@ class BotGUI(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.onClose)
         self.panel = wx.Panel(self)
 
+        self.repeatDelay = -1
         self.maptoattackdelay = 1500
         self.thread = None
+        self.closing = False
         self.sets = []
         self.setHomes = []
         self.villages = []
@@ -26,7 +28,7 @@ class BotGUI(wx.Frame):
         self.set_list = wx.ListBox(self.panel, 2, pos=wx.Point(10, 25), size=(180, 280),
                                    choices=self.sets, name='Sets')
         self.set_list.SetSelection(0)
-        self.thread = myThread(self.villages[0], doneFunc, self, self.maptoattackdelay)
+        self.thread = myThread(self.villages[0], doneFunc, self, self.maptoattackdelay, self.repeatDelay, timerFunc)
 
         temp = wx.StaticText(self.panel, -1, "Targets and preset key: ", pos=(210, 5))
 
@@ -72,22 +74,45 @@ class BotGUI(wx.Frame):
         self.deleteAttackButton = wx.Button(self.panel, label="Delete", pos=(525, 85), size=(50, 30))
         self.Bind(wx.EVT_BUTTON, self.deleteAttack, self.deleteAttackButton)
 
-        self.continueCheckBox = wx.CheckBox(self.panel, -1, label=" Continue from \n selected attack", pos=(470, 190))
+        self.continueCheckBox = wx.CheckBox(self.panel, -1, label=" Continue from \n selected attack", pos=(470, 170))
 
-        self.runButton = wx.Button(self.panel, label="Run Set", pos=(470, 225), size=(100, 80))
+        self.runButton = wx.Button(self.panel, label="Run Set", pos=(470, 205), size=(100, 40))
         self.Bind(wx.EVT_BUTTON, self.run, self.runButton)
 
         self.attackNum = wx.StaticText(self.panel, -1, "Number of attacks: " + str(len(self.villages[0])), pos=(210, 305))
         self.presetNum = wx.StaticText(self.panel, -1, self.makePresetText(), pos=(210, 335))
 
-        self.timeSlider = wx.Slider(self.panel, -1, value=self.maptoattackdelay, minValue=0, maxValue=5000, style=(wx.SL_HORIZONTAL|wx.SL_LABELS), pos=(480, 145))
-        self.timeSlider.Bind(wx.EVT_SLIDER, self.timeSliderScroll)
+        #self.timeSlider = wx.Slider(self.panel, -1, value=self.maptoattackdelay, minValue=0, maxValue=5000, style=(wx.SL_HORIZONTAL|wx.SL_LABELS), pos=(480, 145))
+        #self.timeSlider.Bind(wx.EVT_SLIDER, self.timeSliderScroll)
+        self.timeMTA = wx.TextCtrl(self.panel, -1, str(self.maptoattackdelay), pos=(475, 145), size=(60, 16))
+        self.timeMTA.Bind(wx.EVT_TEXT, self.timeMTAChange)
 
-        self.sliderText = wx.StaticText(self.panel, -1, "MapToAttack Delay: ", pos=(470, 120))
-        self.sliderText = wx.StaticText(self.panel, -1, "msec", pos=(535, 170))
+        self.timeMTAText = wx.StaticText(self.panel, -1, "MapToAttack Delay: ", pos=(470, 120))
+        self.timeMTAText = wx.StaticText(self.panel, -1, "msec", pos=(540, 145))
 
-    def timeSliderScroll(self, e):
-        self.maptoattackdelay = self.timeSlider.GetValue()
+        self.timeRepeat = wx.TextCtrl(self.panel, -1, str(self.repeatDelay), pos=(475, 275), size=(60, 16))
+        self.timeRepeat.Bind(wx.EVT_TEXT, self.timeRepeatChange)
+
+        self.timeRepeatText = wx.StaticText(self.panel, -1, "Repeat attacks in: ", pos=(470, 250))
+        self.timeRepeatText = wx.StaticText(self.panel, -1, "mins", pos=(540, 275))
+
+        self.timeLeft = wx.StaticText(self.panel, -1, "00:00", pos=(500, 310))
+        font = wx.Font(18, wx.DEFAULT, wx.NORMAL, wx.BOLD)
+        self.timeLeft.SetFont(font)
+
+    def timeRepeatChange(self, e):
+        try:
+            self.repeatDelay = int(self.timeRepeat.GetValue())
+        except:
+            self.repeatDelay = -1
+            self.timeRepeat.SetValue("-1")
+
+    def timeMTAChange(self, e):
+        try:
+            self.maptoattackdelay = int(self.timeMTA.GetValue())
+        except:
+            self.maptoattackdelay = 1500
+            self.timeMTA.SetValue("1500")
 
     def saveHome(self, e):
         selected_set = self.set_list.GetSelection()
@@ -105,9 +130,9 @@ class BotGUI(wx.Frame):
             selected_set = self.set_list.GetSelection()
             selected_vil = self.vil_list.GetSelection()
             if self.continueCheckBox.Get3StateValue():
-                self.thread = myThread(list(self.villages[selected_set][selected_vil:]), doneFunc, self, self.maptoattackdelay)
+                self.thread = myThread(list(self.villages[selected_set][selected_vil:]), doneFunc, self, self.maptoattackdelay, timerFunc)
             else:
-                self.thread = myThread(list(self.villages[selected_set]), doneFunc, self, self.maptoattackdelay)
+                self.thread = myThread(list(self.villages[selected_set]), doneFunc, self, self.maptoattackdelay, self.repeatDelay, timerFunc)
             self.thread.start()
 
             self.runButton.SetLabelText("Stop Set")
@@ -288,11 +313,15 @@ class BotGUI(wx.Frame):
     def onClose(self, e):
         dlg = wx.MessageDialog(self,
             "Do you really want to close?",
-            "Confirm Exit", wx.OK|wx.CANCEL|wx.ICON_QUESTION)
+            "Confirm Exit?", wx.OK|wx.CANCEL|wx.ICON_QUESTION)
         result = dlg.ShowModal()
         dlg.Destroy()
         if result == wx.ID_OK:
             self.save_data()
+            self.closing = True
+            self.thread.stop()
+            while threading.activeCount() > 1:
+                time.sleep(0.5)
             self.Destroy()
             sys.exit(0)
 
@@ -314,8 +343,26 @@ class BotGUI(wx.Frame):
         return
 
 def doneFunc(orig, each):
-    orig.runButton.SetLabelText("Run Set")
-    orig.vil_list.SetSelection(each)
+    if orig.closing:
+        return
+    try:
+        orig.runButton.SetLabelText("Run Set")
+        orig.vil_list.SetSelection(each)
+        orig.timeLeft.SetLabelText("00:00")
+    except:
+        return
+    return
+
+def timerFunc(orig, time):
+    if time < 0:
+        return
+    minutes = str(int(time)/60)
+    if len(minutes)==1:
+        minutes = "0" + minutes
+    seconds = str(int(time)%60)
+    if len(seconds) == 1:
+        seconds = "0" + seconds
+    orig.timeLeft.SetLabelText(minutes + ":" + seconds)
     return
 
 if __name__ == '__main__':
