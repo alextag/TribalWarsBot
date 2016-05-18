@@ -9,9 +9,9 @@ class village():
     def distance(self, other):
         pos = (int(self.pos[0]),int(self.pos[1]))
         others = (int(other[0]),int(other[1]))
-        xs = np.power((pos[0]-others[0]), 2)
-        ys = np.power((pos[1]-others[1]), 2)
-        return np.sqrt(xs + (0.75*ys))
+        xs = (pos[0]-others[0])*(pos[0]-others[0])
+        ys = (pos[1]-others[1])*(pos[1]-others[1])
+        return xs + (0.75*ys)#np.sqrt(xs + (0.75*ys))  # Could remove sqrt for #PERFORMANCE
 
     def __str__(self):
         return "("+str(self.pos[0])+"|"+str(self.pos[1])+") - Preset: " + str(self.preset)

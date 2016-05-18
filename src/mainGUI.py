@@ -9,9 +9,10 @@ class BotGUI(wx.Frame):
         wx.Frame.__init__(self, parent, -1, 'TribalOT', size=(600, 400))
         self.Bind(wx.EVT_CLOSE, self.onClose)
         self.panel = wx.Panel(self)
+        self.reverseSort = False
 
         self.repeatDelay = -1
-        self.maptoattackdelay = 1500
+        self.maptoattackdelay = 2000
         self.thread = None
         self.closing = False
         self.sets = []
@@ -71,6 +72,9 @@ class BotGUI(wx.Frame):
         #self.saveAttackButton = wx.Button(self.panel, label="Save", pos=(470,90), size=(110,50))
         #self.Bind(wx.EVT_BUTTON, self.saveAttack, self.saveAttackButton)
 
+        self.sortVillagesButton = wx.Button(self.panel, label="Sort 1to2", pos=(465, 85), size=(60, 30))
+        self.Bind(wx.EVT_BUTTON, self.sortVillages, self.sortVillagesButton)
+
         self.deleteAttackButton = wx.Button(self.panel, label="Delete", pos=(525, 85), size=(50, 30))
         self.Bind(wx.EVT_BUTTON, self.deleteAttack, self.deleteAttackButton)
 
@@ -93,12 +97,39 @@ class BotGUI(wx.Frame):
         self.timeRepeat = wx.TextCtrl(self.panel, -1, str(self.repeatDelay), pos=(475, 275), size=(60, 16))
         self.timeRepeat.Bind(wx.EVT_TEXT, self.timeRepeatChange)
 
-        self.timeRepeatText = wx.StaticText(self.panel, -1, "Repeat attacks in: ", pos=(470, 250))
+        self.timeRepeatText = wx.StaticText(self.panel, -1, "Repeat attacks every: ", pos=(470, 250))
         self.timeRepeatText = wx.StaticText(self.panel, -1, "mins", pos=(540, 275))
 
         self.timeLeft = wx.StaticText(self.panel, -1, "00:00", pos=(500, 310))
         font = wx.Font(18, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         self.timeLeft.SetFont(font)
+
+    def sortVillages(self, e):
+        selected_set = self.set_list.GetSelection()
+        home = self.setHomes[selected_set]
+
+        def compare(vil1, vil2):
+            dis1 = vil1.distance(home)
+            dis2 = vil2.distance(home)
+            if dis1>dis2:
+                return 1
+            elif dis1==dis2:
+                return 0
+            return -1
+
+        self.villages[selected_set] = sorted(self.villages[selected_set], cmp=compare)
+        if self.reverseSort:
+            self.villages[selected_set] = list(reversed(self.villages[selected_set]))
+            self.reverseSort = False
+            self.sortVillagesButton.SetLabelText("Sort 1to2")
+        else:
+            self.reverseSort = True
+            self.sortVillagesButton.SetLabelText("Sort 2to1")
+
+        self.onSetListBox(None)
+        self.set_list.SetSelection(selected_set)
+        self.vil_list.SetSelection(len(self.villages[selected_set]) - 1)
+        self.resetTexts()
 
     def timeRepeatChange(self, e):
         try:
@@ -130,7 +161,7 @@ class BotGUI(wx.Frame):
             selected_set = self.set_list.GetSelection()
             selected_vil = self.vil_list.GetSelection()
             if self.continueCheckBox.Get3StateValue():
-                self.thread = myThread(list(self.villages[selected_set][selected_vil:]), doneFunc, self, self.maptoattackdelay, timerFunc)
+                self.thread = myThread(list(self.villages[selected_set][selected_vil:]), doneFunc, self, self.maptoattackdelay, -1, timerFunc)
             else:
                 self.thread = myThread(list(self.villages[selected_set]), doneFunc, self, self.maptoattackdelay, self.repeatDelay, timerFunc)
             self.thread.start()
