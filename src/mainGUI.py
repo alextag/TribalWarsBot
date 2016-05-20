@@ -6,6 +6,7 @@ from main import *
 class BotGUI(wx.Frame):
 
     def __init__(self, parent=None):
+        # Initializing parameters and setting up the GUI, not much to see here...
         wx.Frame.__init__(self, parent, -1, 'TribalOT', size=(600, 400))
         self.Bind(wx.EVT_CLOSE, self.onClose)
         self.panel = wx.Panel(self)
@@ -105,9 +106,12 @@ class BotGUI(wx.Frame):
         self.timeLeft.SetFont(font)
 
     def sortVillages(self, e):
+        # Get the selected set.
         selected_set = self.set_list.GetSelection()
+        # Get the attacking village of the selected set.
         home = self.setHomes[selected_set]
 
+        # A function that compares two village objects based on what we want.
         def compare(vil1, vil2):
             dis1 = vil1.distance(home)
             dis2 = vil2.distance(home)
@@ -117,7 +121,9 @@ class BotGUI(wx.Frame):
                 return 0
             return -1
 
+        # Get all the attack coordinates and preset keys for the selected set.
         self.villages[selected_set] = sorted(self.villages[selected_set], cmp=compare)
+        # Sort ascending or descending.
         if self.reverseSort:
             self.villages[selected_set] = list(reversed(self.villages[selected_set]))
             self.reverseSort = False
@@ -126,12 +132,14 @@ class BotGUI(wx.Frame):
             self.reverseSort = True
             self.sortVillagesButton.SetLabelText("Sort 2to1")
 
+        # Refresh the GUI.
         self.onSetListBox(None)
         self.set_list.SetSelection(selected_set)
         self.vil_list.SetSelection(len(self.villages[selected_set]) - 1)
         self.resetTexts()
 
     def timeRepeatChange(self, e):
+        # Keep track of the "Repeat attacks every:" value.
         try:
             self.repeatDelay = int(self.timeRepeat.GetValue())
         except:
@@ -139,6 +147,7 @@ class BotGUI(wx.Frame):
             self.timeRepeat.SetValue("-1")
 
     def timeMTAChange(self, e):
+        # Keep track of the "MapToAttack Delay" value.
         try:
             self.maptoattackdelay = int(self.timeMTA.GetValue())
         except:
@@ -146,6 +155,7 @@ class BotGUI(wx.Frame):
             self.timeMTA.SetValue("1500")
 
     def saveHome(self, e):
+        # Save the coordinates of the attacking village if they are changed.
         selected_set = self.set_list.GetSelection()
         try:
             pos = (str(int(self.homeCoordText.GetValue())), str(int(self.homeCoordText2.GetValue())))
@@ -154,14 +164,21 @@ class BotGUI(wx.Frame):
         self.setHomes[selected_set] = pos
 
     def run(self, e):
+        # If you are already running
         if threading.activeCount() > 1:
             self.thread.stop()
             self.runButton.SetLabelText("Stopping Set")
+
+        # If you are not already running
         else:
+            # Find which set the user wants to you to run
             selected_set = self.set_list.GetSelection()
             selected_vil = self.vil_list.GetSelection()
+
+            # If the user wants to continue from the selected attack, remove the previous attacks from the list.
             if self.continueCheckBox.Get3StateValue():
                 self.thread = myThread(list(self.villages[selected_set][selected_vil:]), doneFunc, self, self.maptoattackdelay, -1, timerFunc)
+            # Else run the whole set with all the attacks.
             else:
                 self.thread = myThread(list(self.villages[selected_set]), doneFunc, self, self.maptoattackdelay, self.repeatDelay, timerFunc)
             self.thread.start()
@@ -169,14 +186,18 @@ class BotGUI(wx.Frame):
             self.runButton.SetLabelText("Stop Set")
 
     def deleteAttack(self, e):
+        # Get which set and which attack are selected
         selected_set = self.set_list.GetSelection()
         selected_vil = self.vil_list.GetSelection()
 
+        # If this is the last attack in that set, create a new empty attack before deleting this one
         if len(self.villages[selected_set]) == 1:
             self.newAttack(None)
 
+        # Delete the selected attack
         del self.villages[selected_set][selected_vil]
 
+        # Refresh the GUI.
         self.onSetListBox(None)
         self.set_list.SetSelection(selected_set)
         new_selection = min(selected_vil, len(self.villages[selected_set])-1)
@@ -184,40 +205,51 @@ class BotGUI(wx.Frame):
         self.resetTexts()
 
     def newAttack(self, e):
+        # Get the selected set.
         selected_set = self.set_list.GetSelection()
+        # Add an empty attack in that set.
         self.villages[selected_set].append(village((-1, -1), -1))
+        # Refresh the GUI.
         self.onSetListBox(None)
         self.set_list.SetSelection(selected_set)
         self.vil_list.SetSelection(len(self.villages[selected_set])-1)
         self.resetTexts()
 
     def saveAttack(self, e):
+        ''' This runs when the coordinates or the preset for an attack are changed. '''
+        # Get which set and which attack in that set are selected.
         selected_set = self.set_list.GetSelection()
         selected_vil = self.vil_list.GetSelection()
 
+        # If any of the coordinates are changed, see if they are valid numbers and try to save them.
         try:
             pos = (str(abs(int(self.coordText.GetValue()))), str(abs(int(self.coordText2.GetValue()))))
         except ValueError:
             pos = ("-1", "-1")
-
+        # Same for presets.
         try:
             preset = str(abs(int(self.presetText.GetValue())))
         except ValueError:
             preset = "-1"
 
+        # Save the new values.
         self.villages[selected_set][selected_vil].pos = pos
         self.villages[selected_set][selected_vil].preset = preset
 
+        # Refresh the GUI.
         self.onSetListBox(None, False)
         self.set_list.SetSelection(selected_set)
         self.vil_list.SetSelection(selected_vil)
         #self.resetTexts()
 
     def setUp(self, e):
+        ''' Moves a set up on the list.'''
+        # Get the selected set.
         index = self.set_list.GetSelection()
+        # If the selected set is already on top, do nothing.
         if index < 1:
             return
-
+        # Else, change places with the set above it.
         temp = self.villages[index]
         self.villages[index] = self.villages[index-1]
         self.villages[index-1] = temp
@@ -226,14 +258,18 @@ class BotGUI(wx.Frame):
         self.sets[index] = self.sets[index-1]
         self.sets[index-1] = temp
 
+        # Refresh the GUI.
         self.resetSetListBox()
         self.set_list.SetSelection(index-1)
 
     def setDown(self,e ):
+        ''' Moves a set down on the list.'''
+        # Get the selected set.
         index = self.set_list.GetSelection()
+        # If the selected set is last, do nothing.
         if index >= len(self.sets)-1:
             return
-
+        # Else, change places with the set below it.
         temp = self.villages[index]
         self.villages[index] = self.villages[index+1]
         self.villages[index+1] = temp
@@ -242,45 +278,59 @@ class BotGUI(wx.Frame):
         self.sets[index] = self.sets[index+1]
         self.sets[index+1] = temp
 
+        # Refresh the GUI.
         self.resetSetListBox()
         self.set_list.SetSelection(index+1)
 
     def addSet(self, e):
+        ''' Adds a new set. '''
+        # Request a new set name from the user.
         name = "Set_name"
         box = wx.TextEntryDialog(None, "New Attack Set Name:", "Choose attack set name", "Attack Set Name")
         if box.ShowModal() == wx.ID_OK:
             name = box.GetValue()
         else:
+            # If the user presses cancel, don't add anything.
             return
+
+        # Add the set to the list of sets and initialize its values.
         self.sets.append(name)
         self.setHomes.append(('500', '500'))
         self.villages.append([])
 
+        # Refresh the GUI.
         self.resetSetListBox()
         self.set_list.SetSelection(len(self.sets)-1)
         self.onSetListBox(None)
 
     def remSet(self, e):
+        ''' Deletes the selected set.'''
+        # Ask the user if they are sure.
         dlg = wx.MessageDialog(self,
             "Do you really want to delete this set?",
             "Confirm Deletion", wx.OK|wx.CANCEL|wx.ICON_QUESTION)
         result = dlg.ShowModal()
         dlg.Destroy()
         if result == wx.ID_OK:
+            # If they are, find the selected set.
             selected_set = self.set_list.GetSelection()
 
+            # If this is the last set, don't delete it.
             if len(self.villages) <= 1:
                 return
 
+            # Delete the set along with all its attacks and the attacking village coordinates.
             del self.villages[selected_set]
             del self.sets[selected_set]
             del self.setHomes[selected_set]
 
+            # Refresh the GUI.
             self.resetSetListBox()
             self.set_list.SetSelection(0)
             self.onSetListBox(None)
 
     def resetSetListBox(self):
+        ''' Refreshes the set list GUI. '''
         self.set_list.Destroy()
         self.set_list = wx.ListBox(self.panel, 2, pos=wx.Point(10, 25), size=(180, 280),
                                    choices=self.sets, name='Sets')
@@ -288,6 +338,7 @@ class BotGUI(wx.Frame):
         self.set_list.SetSelection(len(self.villages) - 1)
 
     def onSetListBox(self, e, resetTexts=True):
+        ''' Refreshes the list of attacks of a set GUI.'''
         self.vil_list.Destroy()
         selected_set = self.set_list.GetSelection()
 
@@ -311,6 +362,7 @@ class BotGUI(wx.Frame):
         self.resetTexts()
 
     def resetTexts(self):
+        ''' Resets all the text on screen that needs to be refreshed. '''
         selected_vil = self.vil_list.GetSelection()
         set = self.set_list.GetSelection()
 
@@ -330,6 +382,7 @@ class BotGUI(wx.Frame):
         self.presetNum = wx.StaticText(self.panel, -1, self.makePresetText(), pos=(210, 335))
 
     def makePresetText(self):
+        ''' Calculates how many of each preset a set has and makes it into a single string variable. '''
         set = self.set_list.GetSelection()
         text = "Presets Used:"
         for each in ['-1', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
@@ -342,6 +395,7 @@ class BotGUI(wx.Frame):
         return text
 
     def onClose(self, e):
+        ''' Runs when the user tries to close the program. '''
         dlg = wx.MessageDialog(self,
             "Do you really want to close?",
             "Confirm Exit?", wx.OK|wx.CANCEL|wx.ICON_QUESTION)

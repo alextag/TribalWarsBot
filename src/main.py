@@ -106,20 +106,6 @@ def click(handle, pos):
     time.sleep(0.1)
     win32gui.PostMessage(handle, WM_LBUTTONUP, MK_LBUTTON, lParam )
 
-def clickDragLeft(handle, pos):
-    lParam = (pos[1] << 16) | pos[0]
-    win32gui.PostMessage(handle, WM_LBUTTONDOWN, MK_LBUTTON, lParam )
-
-    lParam2 = (pos[1] << 16) | max(pos[0]-100,0)
-    win32gui.PostMessage(handle, WM_MOUSEMOVE, MK_LBUTTON, lParam2)
-    win32gui.PostMessage(handle, WM_LBUTTONUP, MK_LBUTTON, lParam )
-
-def right_click(handle, pos):
-    lParam = (pos[1] << 16) | pos[0]
-    win32gui.PostMessage(handle, WM_RBUTTONDOWN, MK_RBUTTON, lParam )
-    time.sleep(0.1)
-    win32gui.PostMessage(handle, WM_RBUTTONUP, MK_RBUTTON, lParam )
-
 
 def find_wold_map_pos(handle):
     bbox = win32gui.GetWindowRect(handle)
@@ -162,34 +148,5 @@ def send_tab(handle):
     win32gui.PostMessage(handle, WM_KEYUP, VK_TAB, 0)
 
 
-def attack(w, vil):
-    pos = find_wold_map_pos(w)
-    click(w, (pos[0], pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
-    time.sleep(0.1)
-    clickDragLeft(w, (pos[0], pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
-    send_clear(w)  # CTR-A + backspace or delete
-    time.sleep(0.1)
-    type(w, vil.pos[0])
-    time.sleep(0.1)
-    send_tab(w)
-    time.sleep(0.1)
-    send_clear(w)
-    type(w, vil.pos[1])
-    click(w, (pos[0] + MOVE_FROM_COORD, pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
-    time.sleep(1.5 + 1.5*random.random())
-    type(w, vil.preset)
-
 def close_world_map(w):
     click(w, (110, 95))
-
-if __name__=='__main__':
-    w = find_window()
-    pos = find_wold_map_pos(w)
-    close_world_map(w)
-    click(w, pos)
-    right_click(w, (pos[0]-80, pos[1] - (XCOORD_FROM_BOTTOM - WORLD_FROM_BOTTOM)))
-
-    #close_world_map(w)
-    #attack(w, village(('454', '409'), '9'))
-    #attack(w, village(('454', '412'), '9'))
-
