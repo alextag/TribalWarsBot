@@ -1,4 +1,6 @@
-import win32gui, re
+import win32gui, re, time, threading
+
+TIME_UNIT = 1.0
 
 class village():
 
@@ -37,3 +39,53 @@ class WindowMgr:
 
     def __int__(self):
         return self._handle
+
+class Command:
+
+    def __init__(self, attacker, villages, startindex=0):
+        self.villages = villages
+        self.attackingVillage = attacker
+        self.startindex = startindex
+
+class timerThread (threading.Thread):
+
+    def __init__(self, activeSets, commandQueue, timerFunc, orig):
+        threading.Thread.__init__(self)
+        self.activeSets = activeSets
+        self.commandQueue = commandQueue
+        self._stop = threading.Event()
+        self.timerFunc = timerFunc
+        self.orig = orig
+
+    def run(self):
+        while not self._stop.isSet():
+            for com in self.activeSets:
+                com[3] += TIME_UNIT
+                if com[3] >= com[2]:
+                    com[3] = 0
+                    self.commandQueue.append(Command(com[0], com[1]))
+                    print "Command Sent"
+            self.timerFunc(self.orig, self.activeSets)
+            time.sleep(TIME_UNIT)
+
+    def stop(self):
+        self._stop.set()
+
+class attackerThread (threading.Thread):
+
+    def __init__(self, commandQueue):
+        threading.Thread.__init__(self)
+        self.commandQueue = commandQueue
+        self._stop = threading.Event()
+
+    def run(self):
+        while not self._stop.isSet():
+            if len(self.commandQueue)>0:
+                myCopy = self.commandQueue[0]
+                #DOSTUFF
+                print myCopy
+                del self.commandQueue[0]
+            time.sleep(TIME_UNIT)
+
+    def stop(self):
+        self._stop.set()

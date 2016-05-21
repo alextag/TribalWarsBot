@@ -18,12 +18,14 @@ class BotGUI(wx.Frame):
         self.closing = False
         self.sets = []
         self.setHomes = []
+        self.setTimes = []
         self.villages = []
         try:
             self.load_data()
         except IOError:
             self.sets.append("First Village")
             self.setHomes.append((500, 500))
+            self.setTimes.append(-1)
             self.villages.append([village((-1, -1), -1)])
 
         temp = wx.StaticText(self.panel, -1, "Attacking village: ", pos=(10, 5))
@@ -69,7 +71,6 @@ class BotGUI(wx.Frame):
         self.presetText = wx.TextCtrl(self.panel, -1, str(self.villages[0][0].preset), pos=(515, 60), size=(16, 16))
         self.presetText.Bind(wx.EVT_TEXT, self.saveAttack)
 
-
         #self.saveAttackButton = wx.Button(self.panel, label="Save", pos=(470,90), size=(110,50))
         #self.Bind(wx.EVT_BUTTON, self.saveAttack, self.saveAttackButton)
 
@@ -95,7 +96,7 @@ class BotGUI(wx.Frame):
         self.timeMTAText = wx.StaticText(self.panel, -1, "MapToAttack Delay: ", pos=(470, 120))
         self.timeMTAText = wx.StaticText(self.panel, -1, "msec", pos=(540, 145))
 
-        self.timeRepeat = wx.TextCtrl(self.panel, -1, str(self.repeatDelay), pos=(475, 275), size=(60, 16))
+        self.timeRepeat = wx.TextCtrl(self.panel, -1, str(self.setTimes[0]), pos=(475, 275), size=(60, 16))
         self.timeRepeat.Bind(wx.EVT_TEXT, self.timeRepeatChange)
 
         self.timeRepeatText = wx.StaticText(self.panel, -1, "Repeat attacks every: ", pos=(470, 250))
@@ -140,9 +141,12 @@ class BotGUI(wx.Frame):
 
     def timeRepeatChange(self, e):
         # Keep track of the "Repeat attacks every:" value.
+        selected_set = self.set_list.GetSelection()
         try:
+            self.setTimes[selected_set] = int(self.timeRepeat.GetValue())
             self.repeatDelay = int(self.timeRepeat.GetValue())
         except:
+            self.setTimes[selected_set] = -1
             self.repeatDelay = -1
             self.timeRepeat.SetValue("-1")
 
@@ -258,6 +262,14 @@ class BotGUI(wx.Frame):
         self.sets[index] = self.sets[index-1]
         self.sets[index-1] = temp
 
+        temp = self.setHomes[index]
+        self.setHomes[index] = self.setHomes[index-1]
+        self.setHomes[index-1] = temp
+
+        temp = self.setTimes[index]
+        self.setTimes[index] = self.setTimes[index-1]
+        self.setTimes[index-1] = temp
+
         # Refresh the GUI.
         self.resetSetListBox()
         self.set_list.SetSelection(index-1)
@@ -278,6 +290,14 @@ class BotGUI(wx.Frame):
         self.sets[index] = self.sets[index+1]
         self.sets[index+1] = temp
 
+        temp = self.setHomes[index]
+        self.setHomes[index] = self.setHomes[index+1]
+        self.setHomes[index+1] = temp
+
+        temp = self.setTimes[index]
+        self.setTimes[index] = self.setTimes[index+1]
+        self.setTimes[index+1] = temp
+
         # Refresh the GUI.
         self.resetSetListBox()
         self.set_list.SetSelection(index+1)
@@ -296,6 +316,7 @@ class BotGUI(wx.Frame):
         # Add the set to the list of sets and initialize its values.
         self.sets.append(name)
         self.setHomes.append(('500', '500'))
+        self.setTimes.append(-1)
         self.villages.append([])
 
         # Refresh the GUI.
@@ -323,6 +344,7 @@ class BotGUI(wx.Frame):
             del self.villages[selected_set]
             del self.sets[selected_set]
             del self.setHomes[selected_set]
+            del self.setTimes[selected_set]
 
             # Refresh the GUI.
             self.resetSetListBox()
@@ -352,6 +374,7 @@ class BotGUI(wx.Frame):
         self.vil_list = wx.ListBox(self.panel, 3, pos=wx.Point(210, 25), size=(250, 280),
                                    choices=[str(each) for each in self.villages[selected_set]], name='Villages')
         self.vil_list.Bind(wx.EVT_LISTBOX, self.onVilListBox, id=3)
+        self.timeRepeat.SetValue(str(self.setTimes[selected_set]))
         if (len(self.villages[selected_set])<1):
             self.newAttack(None)
         self.vil_list.SetSelection(0)
@@ -414,7 +437,7 @@ class BotGUI(wx.Frame):
         with open('data.pkl', 'wb') as output:
             data = []
             for i in range(len(self.sets)):
-                data.append((self.sets[i], self.setHomes[i],  self.villages[i]))
+                data.append((self.sets[i], self.setHomes[i],  self.villages[i], self.setTimes[i]))
             pickle.dump(data, output)
 
     def load_data(self):
@@ -425,6 +448,10 @@ class BotGUI(wx.Frame):
             self.sets.append(each[0])
             self.setHomes.append(each[1])
             self.villages.append(each[2])
+            try:
+                self.setTimes.append(each[3])
+            except IndexError:
+                self.setTimes.append(-1)
         return
 
 def doneFunc(orig, each):
@@ -448,6 +475,24 @@ def timerFunc(orig, time):
     if len(seconds) == 1:
         seconds = "0" + seconds
     orig.timeLeft.SetLabelText(minutes + ":" + seconds)
+    return
+
+def timerFuncPlus(orig, activeSets):
+    selected_set = orig.set_list.GetSelection()
+    for set in activeSets:
+        if selected_set == set[0]:
+            time = set[2] - set[3]
+            if time < 0:
+                return
+            minutes = str(int(time) / 60)
+            if len(minutes) == 1:
+                minutes = "0" + minutes
+            seconds = str(int(time) % 60)
+            if len(seconds) == 1:
+                seconds = "0" + seconds
+            orig.timeLeft.SetLabelText(minutes + ":" + seconds)
+            return
+        orig.timeLeft.SetLabelText("00:00")
     return
 
 if __name__ == '__main__':
