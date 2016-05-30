@@ -1,6 +1,6 @@
 import random, win32gui, sys, wx, pickle, threading
 from win32con import *
-from utilities import village, WindowMgr
+from utilities import village, WindowMgr, attackerThread, timerThread
 from main import *
 
 class BotGUI(wx.Frame):
@@ -13,6 +13,7 @@ class BotGUI(wx.Frame):
         self.reverseSort = False
 
         self.repeatDelay = -1
+        self.numberOfVillages = -1
         self.maptoattackdelay = 2000
         self.thread = None
         self.closing = False
@@ -20,12 +21,14 @@ class BotGUI(wx.Frame):
         self.setHomes = []
         self.setTimes = []
         self.villages = []
+        self.setActive = []
         try:
             self.load_data()
         except IOError:
             self.sets.append("First Village")
             self.setHomes.append((500, 500))
             self.setTimes.append(-1)
+            self.setActive.append(False)
             self.villages.append([village((-1, -1), -1)])
 
         temp = wx.StaticText(self.panel, -1, "Attacking village: ", pos=(10, 5))
@@ -51,10 +54,17 @@ class BotGUI(wx.Frame):
         self.remSetButton = wx.Button(self.panel, label="Remove Set", pos=(10, 333))
         self.Bind(wx.EVT_BUTTON, self.remSet, self.remSetButton)
 
-        self.setUpButton = wx.Button(self.panel, label="UP", pos=(110, 325), size=(32, 32))
+        temp = wx.StaticText(self.panel, -1, "Curr Vil:", pos=(100, 310))
+        self.currentVillageIndicator = wx.TextCtrl(self.panel, -1, str(1), pos=(145, 310), size=(24, 16))
+        self.currentVillageIndicator.Bind(wx.EVT_TEXT, self.saveCurrVill)
+        temp = wx.StaticText(self.panel, -1, "/", pos=(172, 310))
+        self.villagesNumberText = wx.TextCtrl(self.panel, -1, str(-1) , pos=(180, 310), size=(32, 16))
+        self.villagesNumberText.Bind(wx.EVT_TEXT, self.saveVillNumber)
+
+        self.setUpButton = wx.Button(self.panel, label="UP", pos=(110, 333), size=(32, 26))
         self.Bind(wx.EVT_BUTTON,self.setUp, self.setUpButton)
 
-        self.setDownButton = wx.Button(self.panel, label="DOWN", pos=(150, 325), size=(48, 32))
+        self.setDownButton = wx.Button(self.panel, label="DOWN", pos=(150, 333), size=(48, 26))
         self.Bind(wx.EVT_BUTTON, self.setDown, self.setDownButton)
 
         self.newAttackButton = wx.Button(self.panel, label="Create New Attack", pos=(470, 5), size=(110, 25))
@@ -105,6 +115,30 @@ class BotGUI(wx.Frame):
         self.timeLeft = wx.StaticText(self.panel, -1, "00:00", pos=(500, 310))
         font = wx.Font(18, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         self.timeLeft.SetFont(font)
+
+        self.commandQueue = []
+        self.aThread = attackerThread(self.commandQueue, -1, currentVillageFunction, self)
+        self.tThread = timerThread([], self.commandQueue, timerFuncPlus, self, doneFunc, self.aThread)
+        self.aThread.start()
+        self.tThread.start()
+
+    def saveCurrVill(self, e):
+        try:
+            temp = int(self.currentVillageIndicator.GetValue())
+            if temp > 0:
+                self.aThread.currentVillage = temp - 1
+            else:
+                self.currentVillageIndicator.SetValue(str(self.aThread.currentVillage + 1))
+        except ValueError:
+            self.currentVillageIndicator.SetValue(str(self.aThread.currentVillage + 1))
+
+    def saveVillNumber(self, e):
+        try:
+            self.numberOfVillages = int(self.villagesNumberText.GetValue())
+        except ValueError:
+            self.numberOfVillages = -1
+            self.villagesNumberText.SetValue(str(-1))
+        self.aThread.villaNumber = self.numberOfVillages
 
     def sortVillages(self, e):
         # Get the selected set.
@@ -168,24 +202,30 @@ class BotGUI(wx.Frame):
         self.setHomes[selected_set] = pos
 
     def run(self, e):
+        selected_set = self.set_list.GetSelection()
         # If you are already running
-        if threading.activeCount() > 1:
-            self.thread.stop()
+        if self.setActive[selected_set]:
+            self.tThread.stopSet(selected_set)
             self.runButton.SetLabelText("Stopping Set")
 
         # If you are not already running
         else:
             # Find which set the user wants to you to run
-            selected_set = self.set_list.GetSelection()
+
             selected_vil = self.vil_list.GetSelection()
 
             # If the user wants to continue from the selected attack, remove the previous attacks from the list.
-            if self.continueCheckBox.Get3StateValue():
-                self.thread = myThread(list(self.villages[selected_set][selected_vil:]), doneFunc, self, self.maptoattackdelay, -1, timerFunc)
+            #if self.continueCheckBox.Get3StateValue():
+            #    self.thread = myThread(list(self.villages[selected_set][selected_vil:]), doneFunc, self, self.maptoattackdelay, -1, timerFunc)
+
             # Else run the whole set with all the attacks.
-            else:
-                self.thread = myThread(list(self.villages[selected_set]), doneFunc, self, self.maptoattackdelay, self.repeatDelay, timerFunc)
-            self.thread.start()
+            #else:
+            #    self.thread = myThread(list(self.villages[selected_set]), doneFunc, self, self.maptoattackdelay, self.repeatDelay, timerFunc)
+            #self.thread.start()
+
+            self.tThread.setToAdd = [selected_set, self.villages[selected_set], self.setTimes[selected_set] * 60, self.setTimes[selected_set] * 60]
+            self.tThread.addSet()
+            self.setActive[selected_set] = True
 
             self.runButton.SetLabelText("Stop Set")
 
@@ -232,7 +272,7 @@ class BotGUI(wx.Frame):
             pos = ("-1", "-1")
         # Same for presets.
         try:
-            preset = str(abs(int(self.presetText.GetValue())))
+            preset = str(int(self.presetText.GetValue()))
         except ValueError:
             preset = "-1"
 
@@ -270,6 +310,10 @@ class BotGUI(wx.Frame):
         self.setTimes[index] = self.setTimes[index-1]
         self.setTimes[index-1] = temp
 
+        temp = self.setActive[index]
+        self.setActive[index] = self.setActive[index-1]
+        self.setActive[index-1] = temp
+
         # Refresh the GUI.
         self.resetSetListBox()
         self.set_list.SetSelection(index-1)
@@ -298,6 +342,10 @@ class BotGUI(wx.Frame):
         self.setTimes[index] = self.setTimes[index+1]
         self.setTimes[index+1] = temp
 
+        temp = self.setActive[index]
+        self.setActive[index] = self.setActive[index+1]
+        self.setActive[index+1] = temp
+
         # Refresh the GUI.
         self.resetSetListBox()
         self.set_list.SetSelection(index+1)
@@ -317,6 +365,7 @@ class BotGUI(wx.Frame):
         self.sets.append(name)
         self.setHomes.append(('500', '500'))
         self.setTimes.append(-1)
+        self.setActive.append(False)
         self.villages.append([])
 
         # Refresh the GUI.
@@ -345,6 +394,7 @@ class BotGUI(wx.Frame):
             del self.sets[selected_set]
             del self.setHomes[selected_set]
             del self.setTimes[selected_set]
+            del self.setActive[selected_set]
 
             # Refresh the GUI.
             self.resetSetListBox()
@@ -363,6 +413,10 @@ class BotGUI(wx.Frame):
         ''' Refreshes the list of attacks of a set GUI.'''
         self.vil_list.Destroy()
         selected_set = self.set_list.GetSelection()
+        if self.setActive[selected_set]:
+            self.runButton.SetLabelText("Stop Set")
+        else:
+            self.runButton.SetLabelText("Run Set")
 
         self.homeCoordText.Destroy()
         self.homeCoordText2.Destroy()
@@ -375,7 +429,7 @@ class BotGUI(wx.Frame):
                                    choices=[str(each) for each in self.villages[selected_set]], name='Villages')
         self.vil_list.Bind(wx.EVT_LISTBOX, self.onVilListBox, id=3)
         self.timeRepeat.SetValue(str(self.setTimes[selected_set]))
-        if (len(self.villages[selected_set])<1):
+        if len(self.villages[selected_set]) < 1:
             self.newAttack(None)
         self.vil_list.SetSelection(0)
         if resetTexts:
@@ -428,6 +482,8 @@ class BotGUI(wx.Frame):
             self.save_data()
             self.closing = True
             self.thread.stop()
+            self.aThread.stop()
+            self.tThread.stop()
             while threading.activeCount() > 1:
                 time.sleep(0.5)
             self.Destroy()
@@ -448,19 +504,21 @@ class BotGUI(wx.Frame):
             self.sets.append(each[0])
             self.setHomes.append(each[1])
             self.villages.append(each[2])
+            self.setActive.append(False)
             try:
                 self.setTimes.append(each[3])
             except IndexError:
                 self.setTimes.append(-1)
         return
 
-def doneFunc(orig, each):
+def doneFunc(orig, set):
     if orig.closing:
         return
     try:
-        orig.runButton.SetLabelText("Run Set")
-        orig.vil_list.SetSelection(each)
-        orig.timeLeft.SetLabelText("00:00")
+        selected_set = orig.set_list.GetSelection()
+        orig.setActive[set] = False
+        if selected_set == set:
+            orig.runButton.SetLabelText("Run Set")
     except:
         return
     return
@@ -492,8 +550,11 @@ def timerFuncPlus(orig, activeSets):
                 seconds = "0" + seconds
             orig.timeLeft.SetLabelText(minutes + ":" + seconds)
             return
-        orig.timeLeft.SetLabelText("00:00")
+    orig.timeLeft.SetLabelText("00:00")
     return
+
+def currentVillageFunction(orig, currVillage):
+    orig.currentVillageIndicator.SetValue(str(currVillage + 1))
 
 if __name__ == '__main__':
     app = wx.App()
