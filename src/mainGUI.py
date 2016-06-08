@@ -1,7 +1,6 @@
-import random, win32gui, sys, wx, pickle, threading
+import random, win32gui, sys, wx, pickle, threading, time
 from win32con import *
 from utilities import village, WindowMgr, attackerThread, timerThread
-from main import *
 
 class BotGUI(wx.Frame):
 
@@ -15,7 +14,6 @@ class BotGUI(wx.Frame):
         self.repeatDelay = -1
         self.numberOfVillages = -1
         self.maptoattackdelay = 2000
-        self.thread = None
         self.closing = False
         self.sets = []
         self.setHomes = []
@@ -35,7 +33,6 @@ class BotGUI(wx.Frame):
         self.set_list = wx.ListBox(self.panel, 2, pos=wx.Point(10, 25), size=(180, 280),
                                    choices=self.sets, name='Sets')
         self.set_list.SetSelection(0)
-        self.thread = myThread(self.villages[0], doneFunc, self, self.maptoattackdelay, self.repeatDelay, timerFunc)
 
         temp = wx.StaticText(self.panel, -1, "Targets and preset key: ", pos=(210, 5))
 
@@ -211,18 +208,9 @@ class BotGUI(wx.Frame):
         # If you are not already running
         else:
             # Find which set the user wants to you to run
-
             selected_vil = self.vil_list.GetSelection()
 
-            # If the user wants to continue from the selected attack, remove the previous attacks from the list.
-            #if self.continueCheckBox.Get3StateValue():
-            #    self.thread = myThread(list(self.villages[selected_set][selected_vil:]), doneFunc, self, self.maptoattackdelay, -1, timerFunc)
-
-            # Else run the whole set with all the attacks.
-            #else:
-            #    self.thread = myThread(list(self.villages[selected_set]), doneFunc, self, self.maptoattackdelay, self.repeatDelay, timerFunc)
-            #self.thread.start()
-
+            # Send the appropriate command to the timer Thread.
             self.tThread.setToAdd = [selected_set, self.villages[selected_set], self.setTimes[selected_set] * 60, self.setTimes[selected_set] * 60]
             self.tThread.addSet()
             self.setActive[selected_set] = True
@@ -481,7 +469,6 @@ class BotGUI(wx.Frame):
         if result == wx.ID_OK:
             self.save_data()
             self.closing = True
-            self.thread.stop()
             self.aThread.stop()
             self.tThread.stop()
             while threading.activeCount() > 1:
